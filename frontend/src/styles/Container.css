@@ -1,0 +1,172 @@
+.Container {
+  transform: scale(0.8);
+  margin-top: -7.5%;
+  background-color: white;
+  height: fit-content;
+  max-width: 600px;
+  width: 100%;
+  border-radius: 10px;
+  box-shadow: 1px 1px 10px 1px rgba(0, 0, 0, 0.1);
+  border: 5px solid white;
+  overflow: visible; /* ✅ allow footer to display fully */
+}
+
+.Header {
+  padding: 20px;
+  background-color: #6D2323;
+  border-radius: 5px 5px 0 0;
+  border-bottom: 5px solid white;  /* ✅ creates clean white separation */
+}
+
+
+.HeaderTitle{
+    width: 100%;
+    display: flex;
+    margin-top: 6px;
+    justify-content: center;
+}
+
+.CircleCon{
+    transform: scale(0.8);
+    max-width: fit-content;
+    max-height: fit-content;
+    display: flex;
+    align-items: center;
+    border: 5px solid white;
+    justify-content: center;
+    border: 5px solid white;
+    border-radius: 70%;
+}
+
+.CircleCon img{
+    width: 105px;
+    height: 105px;
+    border-radius: 50%;
+}
+
+.HeaderBody{
+    text-align: center;
+    color: white;
+    margin-top: -3px;
+    letter-spacing: 1px;
+}
+
+.HeaderBody strong{
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.HeaderBody p{
+    font-size: 17px;
+    font-weight: 200;
+    margin-top: -1px;
+}
+
+.Body {
+    padding: 30px 28px 0 28px; /* remove bottom padding */
+}
+
+
+.TextField{
+    display: flex;
+    margin-bottom: 20px;
+    flex-direction: column;
+    position: relative;
+}
+
+.TextField label{
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 5px;
+}
+
+.TextField input{
+    padding: 10px 15px;
+    font-size: 16px;
+    outline: none;
+    border-radius: 8px;
+    font-family: Poppins, sans-serif;
+    border-color: rgb(229, 32, 32, 0.4);
+}
+
+.TextField select{
+    border-radius: 8px;
+    padding: 10px 15px;
+    border-color: rgb(229, 32, 32, 0.4);
+}
+
+.Button{
+    background-color: #6D2323;
+    text-align: center;
+    color: white;
+    padding: 12px 0px;
+    margin-top: 50px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.LinkContainer{
+    padding: 30px 0;
+    text-align: center;
+    color: #000000;
+    margin-top: -2%;
+}
+
+.LinkContainer span{
+    width: fit-content;
+    height: fit-content;
+    cursor: pointer;
+}
+
+.LinkContainer span:hover{
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.RegistrationLink{
+    margin: -60px 0px -26px 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 15px;
+}
+
+.RegistrationLink span{
+    font-size: 16px;
+    text-decoration: underline;
+    text-underline-offset: 8px;
+}
+
+.Footer {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 15px;
+  color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(243, 219, 173, 0.531);
+  border-radius: 0 0 10px 10px;
+  margin-top: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+
+
+
+.Checkbox{
+    display: flex;
+    align-items: center;
+    margin-left: -40px;
+    transform: scale(0.9);
+    margin: -20px -40px;
+}
+
+.Checkbox label{
+    margin-top: 2px;
+    font-weight: 500;
+    margin-left: -5px;
+    color: rgba(0, 0, 0, 0.6);
+}
