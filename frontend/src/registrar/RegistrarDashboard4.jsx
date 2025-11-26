@@ -75,9 +75,7 @@ const RegistrarDashboard4 = () => {
         { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
         { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-        { label: "Qualifying / Interview Room Assignment", to: "/assign_qualifying_interview_exam", icon: <MeetingRoomIcon fontSize="large" /> },
-        { label: "Qualifying / Interview Schedule Management", to: "/assign_schedule_applicants_qualifying_interview", icon: <ScheduleIcon fontSize="large" /> },
-        { label: "Qualifying / Interviewer Applicant's List", to: "/qualifying_interviewer_applicant_list", icon: <PeopleIcon fontSize="large" /> },
+      
         { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <PersonSearchIcon fontSize="large" /> },
         { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
         { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },

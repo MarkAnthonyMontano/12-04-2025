@@ -258,7 +258,7 @@ const AdmissionDashboardPanel = () => {
 
                       {/* HOVERABLE BUTTON */}
                       <button
-                        className="bg-white rounded-lg p-4 w-80 h-36 font-medium mt-20 ml-8 flex items-end justify-center"
+                        className="bg-[#fef9e1] rounded-lg p-4 w-80 h-36 font-medium mt-20 ml-8 flex items-end justify-center"
                         style={{
                           border: `5px solid ${borderColor}`,
                           color: titleColor,
@@ -271,7 +271,7 @@ const AdmissionDashboardPanel = () => {
                           e.currentTarget.style.border = `5px solid ${borderColor}`;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "white";
+                          e.currentTarget.style.backgroundColor = "#fef9e1";
                           e.currentTarget.style.color = titleColor;
                           e.currentTarget.style.border = `5px solid ${borderColor}`;
                         }}

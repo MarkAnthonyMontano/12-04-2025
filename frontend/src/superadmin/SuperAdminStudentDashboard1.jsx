@@ -177,8 +177,8 @@ const SuperAdminStudentDashboard1 = () => {
 
     // do not alter
     const location = useLocation();
-    
- const queryParams = new URLSearchParams(location.search);
+
+    const queryParams = new URLSearchParams(location.search);
     const queryPersonId = queryParams.get("person_id");
 
     useEffect(() => {
@@ -741,13 +741,18 @@ const SuperAdminStudentDashboard1 = () => {
         setSnack({ ...snack, open: false });
     };
 
+    const showSnack = (message, severity = "info") => {
+        setSnack({ open: true, message, severity });
+
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            setSnack(prev => ({ ...prev, open: false }));
+        }, 3000);
+    };
+
     const handleImportExcel = async () => {
         if (!excelFile) {
-            setSnack({
-                open: true,
-                message: "⚠️ Please select a file to import.",
-                severity: "warning",
-            });
+            showSnack("⚠️ Please select a file to import.", "warning");
             return;
         }
 
@@ -760,27 +765,15 @@ const SuperAdminStudentDashboard1 = () => {
             });
 
             if (res.data.success) {
-                setSnack({
-                    open: true,
-                    message: `✅ ${res.data.message}`,
-                    severity: "success",
-                });
+                showSnack(`✅ ${res.data.message}`, "success");
                 // optional: re-fetch applicants if needed
                 // await fetchApplicants();
             } else {
-                setSnack({
-                    open: true,
-                    message: res.data.error || "⚠️ Import failed.",
-                    severity: "warning",
-                });
+                showSnack(res.data.error || "⚠️ Import failed.", "warning");
             }
         } catch (error) {
             console.error("❌ Import error:", error);
-            setSnack({
-                open: true,
-                message: "❌ Server error while importing Excel.",
-                severity: "error",
-            });
+            showSnack("❌ Server error while importing Excel.", "error");
         }
     };
 
@@ -861,26 +854,26 @@ const SuperAdminStudentDashboard1 = () => {
 
 
 
-const links = [
-  {
-    to: userID ? `/admin_ecat_application_form?person_id=${userID}` : "/admin_ecat_application_form",
-    label: "ECAT Application Form",
-  },
-  {
-    to: userID ? `/admin_admission_form_process?person_id=${userID}` : "/admin_admission_form_process",
-    label: "Admission Form Process",
-  },
-  {
-    to: userID ? `/admin_personal_data_form?person_id=${userID}` : "/admin_personal_data_form",
-    label: "Personal Data Form",
-  },
-  {
-    to: userID ? `/admin_office_of_the_registrar?person_id=${userID}` : "/admin_office_of_the_registrar",
-    label: `Application For ${shortTerm ? shortTerm.toUpperCase() : ""} College Admission`,
-  },
-  { to: "/admission_services", label: "Application/Student Satisfactory Survey" },
- 
-];
+    const links = [
+        {
+            to: userID ? `/admin_ecat_application_form?person_id=${userID}` : "/admin_ecat_application_form",
+            label: "ECAT Application Form",
+        },
+        {
+            to: userID ? `/admin_admission_form_process?person_id=${userID}` : "/admin_admission_form_process",
+            label: "Admission Form Process",
+        },
+        {
+            to: userID ? `/admin_personal_data_form?person_id=${userID}` : "/admin_personal_data_form",
+            label: "Personal Data Form",
+        },
+        {
+            to: userID ? `/admin_office_of_the_registrar?person_id=${userID}` : "/admin_office_of_the_registrar",
+            label: `Application For ${shortTerm ? shortTerm.toUpperCase() : ""} College Admission`,
+        },
+        { to: "/admission_services", label: "Application/Student Satisfactory Survey" },
+
+    ];
 
 
     const [canPrintPermit, setCanPrintPermit] = useState(false);

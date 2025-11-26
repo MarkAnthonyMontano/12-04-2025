@@ -96,9 +96,7 @@ const StudentNumbering = () => {
         { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
         { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-        { label: "Qualifying / Interview Room Assignment", to: "/assign_qualifying_interview_exam", icon: <MeetingRoomIcon fontSize="large" /> },
-        { label: "Qualifying / Interview Schedule Management", to: "/assign_schedule_applicants_qualifying_interview", icon: <ScheduleIcon fontSize="large" /> },
-        { label: "Qualifying / Interviewer Applicant's List", to: "/qualifying_interviewer_applicant_list", icon: <PeopleIcon fontSize="large" /> },
+
         { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <PersonSearchIcon fontSize="large" /> },
         { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
         { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
@@ -107,9 +105,40 @@ const StudentNumbering = () => {
 
     ];
 
+    const queryParams = new URLSearchParams(location.search);
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const personIdFromUrl = queryParams.get("person_id");
+
+        if (!personIdFromUrl) return;
+
+        // fetch info of that person
+        axios
+            .get(`http://localhost:5000/api/person_with_applicant/${personIdFromUrl}`)
+            .then((res) => {
+                if (res.data?.applicant_number) {
+
+                    // AUTO-INSERT applicant_number into search bar
+                    setSearchQuery(res.data.applicant_number);
+
+                    // If you have a fetchUploads() or fetchExamScore() — call it
+                    if (typeof fetchUploadsByApplicantNumber === "function") {
+                        fetchUploadsByApplicantNumber(res.data.applicant_number);
+                    }
+
+                    if (typeof fetchApplicants === "function") {
+                        fetchApplicants();
+                    }
+                }
+            })
+            .catch((err) => console.error("Auto search failed:", err));
+    }, [location.search]);
+
+
 
     const navigate = useNavigate();
-    const [activeStep, setActiveStep] = useState(7);
+    const [activeStep, setActiveStep] = useState(4);
     const [clickedSteps, setClickedSteps] = useState(Array(tabs.length).fill(false));
 
 

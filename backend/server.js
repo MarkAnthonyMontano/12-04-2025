@@ -17,14 +17,14 @@ const http = require("http").createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(http, {
   cors: {
-    origin: ["http://localhost:5173", "http://192.168.85.7:5173"],
+    origin: ["http://localhost:5173", "http://192.168.84.228:5173"],
     methods: ["GET", "POST"]
   }
 });
 
 app.use(express.json());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://192.168.85.7:5173"],  // ✅ Explicitly allow Vite dev server
+  origin: ["http://localhost:5173", "http://192.168.84.228:5173"],  // ✅ Explicitly allow Vite dev server
   credentials: true                  // ✅ Allow credentials (cookies, auth)
 }));
 
@@ -2978,6 +2978,7 @@ app.get("/api/applicants-with-number", async (req, res) => {
         a.applicant_number,
         SUBSTRING(a.applicant_number, 5, 1) AS middle_code,
         p.program,
+        p.generalAverage1,
         p.created_at,
         ia.status AS interview_status, 
 
@@ -3255,94 +3256,261 @@ app.put("/api/person/:id", async (req, res) => {
 });
 
 
+
 app.post("/api/person/import", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheetName = workbook.SheetNames[0];
-    const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
-    const dataRows = rawRows.slice(1); // skip header
+    const XLSX = require("xlsx");
 
-    let insertedCount = 0;
-    const batchSize = 500; // 💡 process small batches
+    // ---------------------------------------
+    // HELPERS
+    // ---------------------------------------
+    function excelDateToJSDate(serial) {
+      if (typeof serial !== "number") return serial;
+      const days = Math.floor(serial - 25569);
+      const date = new Date(days * 86400 * 1000);
+      return date.toISOString().split("T")[0];
+    }
+
+    function normalizeGender(val) {
+      if (!val) return null;
+      const v = val.toString().trim().toLowerCase();
+      if (["male", "m", "0"].includes(v)) return 0;
+      if (["female", "f", "1"].includes(v)) return 1;
+      return null;
+    }
+
+    function calculateAge(birthdate) {
+      if (!birthdate) return null;
+      const d = new Date(birthdate);
+      const now = new Date();
+      let age = now.getFullYear() - d.getFullYear();
+      const m = now.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+      return age;
+    }
+
+    // ---------------------------------------
+    // READ EXCEL
+    // ---------------------------------------
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const rows = raw.slice(1);
+
+    // ---------------------------------------
+    // COUNTS (OLD STYLE)
+    // ---------------------------------------
+    let totalRows = 0;
+    let totalValid = 0;
+    let totalInvalid = 0;
+    let totalInserted = 0;
+
+    // ---------------------------------------
+    // OLD IMPORTER STUDENT NUMBER RULE
+    // ---------------------------------------
+    const STUD_NUM_REGEX =
+      /^\d{9,10}$|^\d{3}-\d{3,5}[A-Z]?$/;
+
+    // ---------------------------------------
+    // BASE COLUMNS
+    // ---------------------------------------
     const columns = [
       "student_number", "profile_img", "campus", "academicProgram", "classifiedAs", "applyingAs",
       "program", "program2", "program3", "yearLevel", "last_name", "first_name", "middle_name",
       "extension", "nickname", "height", "weight", "lrnNumber", "nolrnNumber", "gender", "pwdMember",
       "pwdType", "pwdId", "birthOfDate", "age", "birthPlace", "languageDialectSpoken", "citizenship",
-      "religion", "civilStatus", "tribeEthnicGroup", "cellphoneNumber", "emailAddress", "presentStreet",
-      "presentBarangay", "presentZipCode", "presentRegion", "presentProvince", "presentMunicipality",
-      "presentDswdHouseholdNumber", "sameAsPresentAddress", "permanentStreet", "permanentBarangay",
-      "permanentZipCode", "permanentRegion", "permanentProvince", "permanentMunicipality",
-      "permanentDswdHouseholdNumber", "solo_parent", "father_deceased", "father_family_name",
-      "father_given_name", "father_middle_name", "father_ext", "father_nickname", "father_education",
-      "father_education_level", "father_last_school", "father_course", "father_year_graduated",
-      "father_school_address", "father_contact", "father_occupation", "father_employer", "father_income",
-      "father_email", "mother_deceased", "mother_family_name", "mother_given_name", "mother_middle_name",
-      "mother_ext", "mother_nickname", "mother_education", "mother_education_level", "mother_last_school",
-      "mother_course", "mother_year_graduated", "mother_school_address", "mother_contact",
-      "mother_occupation", "mother_employer", "mother_income", "mother_email", "guardian",
-      "guardian_family_name", "guardian_given_name", "guardian_middle_name", "guardian_ext",
-      "guardian_nickname", "guardian_address", "guardian_contact", "guardian_email", "annual_income",
-      "schoolLevel", "schoolLastAttended", "schoolAddress", "courseProgram", "honor", "generalAverage",
-      "yearGraduated", "schoolLevel1", "schoolLastAttended1", "schoolAddress1", "courseProgram1",
+      "religion", "civilStatus", "tribeEthnicGroup", "cellphoneNumber", "emailAddress",
+      "presentStreet", "presentBarangay", "presentZipCode", "presentRegion", "presentProvince",
+      "presentMunicipality", "presentDswdHouseholdNumber", "sameAsPresentAddress",
+      "permanentStreet", "permanentBarangay", "permanentZipCode", "permanentRegion",
+      "permanentProvince", "permanentMunicipality", "permanentDswdHouseholdNumber", "solo_parent",
+      "father_deceased", "father_family_name", "father_given_name", "father_middle_name",
+      "father_ext", "father_nickname", "father_education", "father_education_level",
+      "father_last_school", "father_course", "father_year_graduated", "father_school_address",
+      "father_contact", "father_occupation", "father_employer", "father_income", "father_email",
+      "mother_deceased", "mother_family_name", "mother_given_name", "mother_middle_name",
+      "mother_ext", "mother_nickname", "mother_education", "mother_education_level",
+      "mother_last_school", "mother_course", "mother_year_graduated", "mother_school_address",
+      "mother_contact", "mother_occupation", "mother_employer", "mother_income", "mother_email",
+      "guardian", "guardian_family_name", "guardian_given_name", "guardian_middle_name",
+      "guardian_ext", "guardian_nickname", "guardian_address", "guardian_contact",
+      "guardian_email", "annual_income", "schoolLevel", "schoolLastAttended",
+      "schoolAddress", "courseProgram", "honor", "generalAverage", "yearGraduated",
+      "schoolLevel1", "schoolLastAttended1", "schoolAddress1", "courseProgram1",
       "honor1", "generalAverage1", "yearGraduated1", "strand", "cough", "colds", "fever", "asthma",
-      "faintingSpells", "heartDisease", "tuberculosis", "frequentHeadaches", "hernia", "chronicCough",
-      "headNeckInjury", "hiv", "highBloodPressure", "diabetesMellitus", "allergies", "cancer",
-      "smokingCigarette", "alcoholDrinking", "hospitalized", "hospitalizationDetails", "medications",
-      "hadCovid", "covidDate", "vaccine1Brand", "vaccine1Date", "vaccine2Brand", "vaccine2Date",
-      "booster1Brand", "booster1Date", "booster2Brand", "booster2Date", "chestXray", "cbc", "urinalysis",
-      "otherworkups", "symptomsToday", "remarks", "termsOfAgreement", "created_at"
+      "faintingSpells", "heartDisease", "tuberculosis", "frequentHeadaches", "hernia",
+      "chronicCough", "headNeckInjury", "hiv", "highBloodPressure", "diabetesMellitus",
+      "allergies", "cancer", "smokingCigarette", "alcoholDrinking", "hospitalized",
+      "hospitalizationDetails", "medications", "hadCovid", "covidDate", "vaccine1Brand",
+      "vaccine1Date", "vaccine2Brand", "vaccine2Date", "booster1Brand", "booster1Date",
+      "booster2Brand", "booster2Date", "chestXray", "cbc", "urinalysis", "otherworkups",
+      "symptomsToday", "remarks", "termsOfAgreement", "created_at"
     ];
 
-    for (let i = 0; i < dataRows.length; i += batchSize) {
-      const chunk = dataRows.slice(i, i + batchSize);
-      const validPersons = [];
-      const numberingRows = [];
+    // ---------------------------------------
+    // PROCESS ROWS
+    // ---------------------------------------
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row.some(v => v)) continue;
 
-      for (const row of chunk) {
-        if (!row[0]) continue;
-        const studentNumber = row[0].toString().trim();
-        if (!/^\d{9,10}$|^\d{3}-\d{3,5}[A-Z]?$/.test(studentNumber)) continue;
+      totalRows++;
 
-        const person = columns.map((_, idx) => (row[idx] ? row[idx] : ""));
-        person[columns.length - 1] = row[146] || new Date(); // created_at
-
-        validPersons.push(person);
-        numberingRows.push(studentNumber);
+      const studentNumber = row[0]?.toString().trim();
+      if (!STUD_NUM_REGEX.test(studentNumber)) {
+        totalInvalid++;
+        continue;
       }
 
-      if (validPersons.length === 0) continue;
+      totalValid++;
 
-      const insertQuery = `
-        INSERT INTO person_table (${columns.join(",")}) VALUES ?
-      `;
-      const [result] = await db3.query(insertQuery, [validPersons]);
-      insertedCount += result.affectedRows;
+      let birthTmp = null;
 
-      // add numbering
-      const studentNumberPairs = numberingRows.map((sn, idx) => [
-        sn,
-        result.insertId + idx,
-      ]);
-      await db3.query(
-        "INSERT INTO student_numbering_table (student_number, person_id) VALUES ?",
-        [studentNumberPairs]
+      // CLEAN + SAFE INT HANDLING (FIXED)
+      const optionalIntFields = [
+        "father_education",
+        "mother_education",
+        "pwdMember",
+        "pwdType"
+      ];
+
+      // values that count as empty
+      const EMPTY_VALUES = ["", "-", "—", "None", "none", "N/A", "n/a", "No", "no"];
+
+      const personValues = columns.map((col, idx) => {
+        let v = row[idx] ?? null;
+
+        // Student number
+        if (col === "student_number") v = studentNumber;
+
+        // Gender
+        if (col === "gender") v = normalizeGender(v);
+
+        // Birthdate → convert
+        if (col === "birthOfDate") {
+          v = excelDateToJSDate(v);
+          birthTmp = v;
+        }
+
+        // Age → auto calc
+        if (col === "age") v = calculateAge(birthTmp);
+
+        // created_at
+        if (col === "created_at") v = new Date();
+
+        // FIX: int fields MUST NEVER BE NULL
+        if (optionalIntFields.includes(col)) {
+          if (v === null || EMPTY_VALUES.includes(String(v).trim())) {
+            v = 0;
+          } else {
+            // Convert non-numeric to 0
+            if (isNaN(Number(v))) v = 0;
+            else v = Number(v);
+          }
+        }
+
+        return v;
+      });
+
+      // ---------------------------------------
+      // RESTORE CURRICULUM → PROGRAM RESOLUTION
+      // ---------------------------------------
+      // Program columns mapping
+      const programCols = ["program", "program2", "program3"];
+
+      for (let p = 0; p < programCols.length; p++) {
+        const columnName = programCols[p];
+        const colIdx = columns.indexOf(columnName);
+
+        if (colIdx === -1) {
+          console.log("Column not found in columns array:", columnName);
+          continue;
+        }
+
+        const rawProg = row[6 + p] ? row[6 + p].toString().trim() : null;
+        if (!rawProg) {
+          personValues[colIdx] = null;
+          continue;
+        }
+
+        console.log("Raw Excel value:", rawProg);
+
+        // Extract program_code from parentheses: (BSBA-HRDM)
+        const match = rawProg.match(/\((.*?)\)/);
+        const programCode = match ? match[1].trim() : null;
+
+        if (!programCode) {
+          console.log("No program_code found in:", rawProg);
+          personValues[colIdx] = null;
+          continue;
+        }
+
+        console.log("Extracted program_code:", programCode);
+
+        // Find program_id using program_code
+        const [progResult] = await db3.query(
+          `SELECT program_id 
+         FROM program_table 
+         WHERE program_code = ? 
+         LIMIT 1`,
+          [programCode]
+        );
+
+        if (!progResult || progResult.length === 0) {
+          console.log("Program not found for code:", programCode);
+          personValues[colIdx] = null;
+          continue;
+        }
+
+        const program_id = progResult[0].program_id;
+        console.log("Matched program_id:", program_id);
+
+        // Save ONLY program_id in person table
+        personValues[colIdx] = program_id;
+
+        console.log(`Saved program_id ${program_id} into personValues for ${columnName}`);
+      }
+
+
+      // ---------------------------------------
+      // INSERT PERSON
+      // ---------------------------------------
+      const [result] = await db3.query(
+        `INSERT INTO person_table (${columns.join(",")}) VALUES (?)`,
+        [personValues]
       );
 
-      console.log(`✅ Batch ${i / batchSize + 1} inserted (${validPersons.length} rows)`);
+      totalInserted++;
+
+      // ---------------------------------------
+      // INSERT STUDENT NUMBERING TABLE
+      // ---------------------------------------
+      await db3.query(
+        `INSERT INTO student_numbering_table (student_number, person_id) VALUES (?, ?)`,
+        [studentNumber, result.insertId]
+      );
     }
 
-    res.json({
+    // ---------------------------------------
+    // RESPONSE (OLD STYLE)
+    // ---------------------------------------
+    return res.json({
       success: true,
-      message: `Excel import done ✅ Total inserted: ${insertedCount}`,
+      imported: totalInserted,
+      totalValid,
+      totalInvalid,
+      totalRows,
+      message: `Imported ${totalInserted} of ${totalRows} rows (Invalid: ${totalInvalid})`
     });
+
   } catch (err) {
-    console.error("❌ Import error:", err);
-    res.status(500).json({ error: "Failed to import Excel" });
+    console.error("IMPORT ERROR:", err);
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 // ✅ Search by student number or name in enrollment db3
 app.get("/api/search-person-student", async (req, res) => {

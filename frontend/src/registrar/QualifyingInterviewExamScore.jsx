@@ -43,7 +43,7 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import SearchIcon from "@mui/icons-material/Search";
-import MenuBookIcon from '@mui/icons-material/MenuBook'; 
+import MenuBookIcon from '@mui/icons-material/MenuBook';
 
 const QualifyingExamScore = () => {
     const socket = useRef(null);
@@ -102,6 +102,7 @@ const QualifyingExamScore = () => {
 
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
+
     const queryPersonId = (queryParams.get("person_id") || "").trim();
 
     const handleRowClick = (person_id) => {
@@ -117,30 +118,33 @@ const QualifyingExamScore = () => {
 
     const tabs = [
         { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
-    { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
-    { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-    { label: "Qualifying / Interview Room Assignment", to: "/assign_qualifying_interview_exam", icon: <MeetingRoomIcon fontSize="large" /> },
-    { label: "Qualifying / Interview Schedule Management", to: "/assign_schedule_applicants_qualifying_interview", icon: <ScheduleIcon fontSize="large" /> },
-    { label: "Qualifying / Interviewer Applicant's List", to: "/qualifying_interviewer_applicant_list", icon: <PeopleIcon fontSize="large" /> },
-    { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <PersonSearchIcon fontSize="large" /> },
-    { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
-     { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
+        { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
+        { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
+
+        { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
+        { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
 
 
     ];
 
 
     const navigate = useNavigate();
-    const [activeStep, setActiveStep] = useState(6);
+    const [activeStep, setActiveStep] = useState(3);
     const [clickedSteps, setClickedSteps] = useState(Array(tabs.length).fill(false));
 
 
     const handleStepClick = (index, to) => {
         setActiveStep(index);
-        navigate(to); // this will actually change the page
+
+        const pid = sessionStorage.getItem("admin_edit_person_id");
+
+        if (pid) {
+            navigate(`${to}?person_id=${pid}`);
+        } else {
+            navigate(to);
+        }
     };
-
-
 
 
     const [persons, setPersons] = useState([]);
@@ -179,6 +183,33 @@ const QualifyingExamScore = () => {
     }, [queryPersonId]);
 
 
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const personIdFromUrl = queryParams.get("person_id");
+
+        if (!personIdFromUrl) return;
+
+        // fetch info of that person
+        axios
+            .get(`http://localhost:5000/api/person_with_applicant/${personIdFromUrl}`)
+            .then((res) => {
+                if (res.data?.applicant_number) {
+
+                    // AUTO-INSERT applicant_number into search bar
+                    setSearchQuery(res.data.applicant_number);
+
+                    // If you have a fetchUploads() or fetchExamScore() — call it
+                    if (typeof fetchUploadsByApplicantNumber === "function") {
+                        fetchUploadsByApplicantNumber(res.data.applicant_number);
+                    }
+
+                    if (typeof fetchApplicants === "function") {
+                        fetchApplicants();
+                    }
+                }
+            })
+            .catch((err) => console.error("Auto search failed:", err));
+    }, [location.search]);
 
 
     const [hasAccess, setHasAccess] = useState(null);
@@ -244,6 +275,7 @@ const QualifyingExamScore = () => {
         middle_name: "",
         document_status: "",
         extension: "",
+        strand: "",
         generalAverage1: "",
         program: "",
         created_at: "",
@@ -2102,7 +2134,9 @@ Thank you, best regards
                             <TableCell sx={{ color: "white", textAlign: "center", width: "20%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
                                 Program
                             </TableCell>
-
+                            <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
+                                SHS GWA
+                            </TableCell>
                             {/* Exam Columns */}
                             <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
                                 Qualifying Exam Score
@@ -2122,9 +2156,7 @@ Thank you, best regards
                             <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
                                 Action
                             </TableCell>
-                            <TableCell sx={{ color: "white", textAlign: "center", width: "15%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
-                                Status
-                            </TableCell>
+
 
 
 
@@ -2201,6 +2233,21 @@ Thank you, best regards
                                             (item) =>
                                                 item.curriculum_id?.toString() === person.program?.toString()
                                         )?.program_code ?? "N/A"}
+                                    </TableCell>
+
+                                    <TableCell
+                                        sx={{
+
+                                            cursor: "pointer",
+                                            textAlign: "center",
+                                            border: `2px solid ${borderColor}`,
+                                            borderLeft: "2px solid maroon",
+                                            py: 0.5,
+                                            fontSize: "14px",
+                                        }}
+                                        onClick={() => handleRowClick(person.person_id)}
+                                    >
+                                        {person.generalAverage1}
                                     </TableCell>
 
                                     {/* Qualifying Exam Score */}
@@ -2301,7 +2348,7 @@ Thank you, best regards
                                                     variant="contained"
                                                     color="error"
                                                     size="small"
-                                                    sx={{ width: "120px", height: "38px" }}
+                                                    sx={{ width: "100px", height: "35px", fontSize: "12px" }}
                                                     onClick={() => handleUnassignImmediate(person.applicant_number)}
                                                 >
                                                     Unassign
@@ -2311,40 +2358,26 @@ Thank you, best regards
                                                     variant="contained"
                                                     color="success"
                                                     onClick={() => handleOpenDialog(null)} // for batch mode
-                                                    sx={{ width: "120px", height: "38px" }}
+                                                    sx={{ width: "100px", height: "35px", fontSize: "12px" }}
                                                 >
                                                     Send Email
                                                 </Button>
                                             </Box>
                                         ) : (
                                             <Button
-                                                variant="outlined"
-                                                color="success"
+                                                variant="contained"
+                                                color="primary"
                                                 size="small"
-                                                sx={{ width: "100px", height: "40px" }}
+                                                sx={{ width: "100px", height: "35px" }}
                                                 onClick={() => handleAssignSingle(person.applicant_number)}
                                             >
                                                 Assign
                                             </Button>
+
                                         )}
                                     </TableCell>
 
 
-
-                                    <TableCell
-                                        sx={{
-                                            color: "black",
-                                            textAlign: "center",
-                                            border: `2px solid ${borderColor}`,
-
-                                            py: 0.5,
-                                            fontSize: "12px",
-                                        }}
-                                    >
-                                        {person.registrar_user_email
-                                            ? person.registrar_user_email
-                                            : "N/A"}
-                                    </TableCell>
 
                                 </TableRow>
                             );

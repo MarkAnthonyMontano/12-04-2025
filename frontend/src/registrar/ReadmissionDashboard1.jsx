@@ -1668,7 +1668,7 @@ const ReadmissionDashboard1 = () => {
                   </Box>
 
                   {/* Program 2 */}
-                  <Box display="flex" alignItems="center" gap={2} mb={1}>
+                  {/* <Box display="flex" alignItems="center" gap={2} mb={1}>
                     <label className="w-40 font-medium">Program 2:</label>
                     <FormControl fullWidth size="small" required error={!!errors.program2}>
                       <InputLabel>Program 2</InputLabel>
@@ -1691,10 +1691,10 @@ const ReadmissionDashboard1 = () => {
                         <FormHelperText>This field is required.</FormHelperText>
                       )}
                     </FormControl>
-                  </Box>
+                  </Box> */}
 
                   {/* Program 3 */}
-                  <Box display="flex" alignItems="center" gap={2}>
+                  {/* <Box display="flex" alignItems="center" gap={2}>
                     <label className="w-40 font-medium">Program 3:</label>
                     <FormControl fullWidth size="small" required error={!!errors.program3}>
                       <InputLabel>Program 3</InputLabel>
@@ -1717,7 +1717,7 @@ const ReadmissionDashboard1 = () => {
                         <FormHelperText>This field is required.</FormHelperText>
                       )}
                     </FormControl>
-                  </Box>
+                  </Box> */}
                 </Box>
               </Box>
 

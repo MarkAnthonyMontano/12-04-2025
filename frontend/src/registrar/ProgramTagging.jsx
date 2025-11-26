@@ -116,6 +116,16 @@ const ProgramTagging = () => {
   const [curriculumList, setCurriculumList] = useState([]);
   const [taggedPrograms, setTaggedPrograms] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [courseSearch, setCourseSearch] = useState("");
+
+  const filteredCourses = courseList.filter((course) => {
+    const text = courseSearch.toLowerCase();
+    return (
+      course.course_code.toLowerCase().includes(text) ||
+      course.course_description.toLowerCase().includes(text)
+    );
+  });
+
 
   useEffect(() => {
     fetchCourse();
@@ -311,6 +321,23 @@ const ProgramTagging = () => {
 
           <div style={styles.formGroup}>
             <label style={styles.label}>Course:</label>
+
+            {/* 🔍 Search Bar for Course */}
+            <input
+              type="text"
+              placeholder="Search course..."
+              value={courseSearch}
+              onChange={(e) => setCourseSearch(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px",
+                marginBottom: "10px",
+                borderRadius: "5px",
+                border: "1px solid #ccc",
+                fontSize: "16px"
+              }}
+            />
+
             <select
               name="course_id"
               value={progTag.course_id}
@@ -318,13 +345,15 @@ const ProgramTagging = () => {
               style={styles.select}
             >
               <option value="">Choose Course</option>
-              {courseList.map((course) => (
+
+              {filteredCourses.map((course) => (
                 <option key={course.course_id} value={course.course_id}>
                   {course.course_code} - {course.course_description}
                 </option>
               ))}
             </select>
           </div>
+
 
           <div style={styles.formGroup}>
             <label style={styles.label}>Year Level:</label>
@@ -440,7 +469,7 @@ const ProgramTagging = () => {
                   {taggedPrograms.map((program) => (
                     <tr key={program.program_tagging_id}>
                       <td style={{ ...styles.td, border: `2px solid ${borderColor}` }}>
-             {program.curriculum_description}     ({program.program_code})        {program.major}
+                        {program.curriculum_description}     ({program.program_code})        {program.major}
                       </td>
 
                       <td style={{ ...styles.td, border: `2px solid ${borderColor}` }}>
