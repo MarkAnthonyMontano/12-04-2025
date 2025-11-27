@@ -80,42 +80,61 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
     lname: "",
     role: "",
   });
+  // 1️⃣ Define the helper function first
+  function getRegistrarHomePage(userAccessList) {
+    if (userAccessList[107]) return "/registrar_dashboard";
+    if (userAccessList[102]) return "/enrollment_officer_dashboard";
+    if (userAccessList[108]) return "/admission_officer_dashboard";
 
+    const firstAllowed = Object.entries(userAccessList).find(([_, v]) => v);
+    if (firstAllowed) {
+      const page = Number(firstAllowed[0]);
+      if (page === 102) return "/enrollment_officer_dashboard";
+      if (page === 108) return "/admission_officer_dashboard";
+    }
+
+    return "/registrar_dashboard";
+  }
+
+  // 2️⃣ Then place the useEffect that uses it
   useEffect(() => {
     const token = localStorage.getItem("token");
     const savedRole = localStorage.getItem("role");
     const storedID = localStorage.getItem("person_id");
+    const accessListStored = localStorage.getItem("accessList");
 
     if (token && savedRole && storedID) {
-      try {
-        const decoded = JSON.parse(atob(token.split(".")[1]));
-        const currentTime = Date.now() / 1000;
+      const decoded = JSON.parse(atob(token.split(".")[1]));
+      const currentTime = Date.now() / 1000;
 
-        if (decoded.exp < currentTime) {
-          // Token expired
-          localStorage.removeItem("token");
-          localStorage.removeItem("role");
-          localStorage.removeItem("person_id");
-          setIsAuthenticated(false);
-          navigate("/");
-        } else {
-          setRole(savedRole); // ✅ Load from saved value
-          fetchPersonData(storedID, savedRole);
-          setIsAuthenticated(true);
-        }
-      } catch (err) {
-        console.log("Token decode error:", err);
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
+      if (decoded.exp < currentTime) {
+        localStorage.clear();
         setIsAuthenticated(false);
         navigate("/");
+      } else {
+        setRole(savedRole);
+        fetchPersonData(storedID, savedRole);
+        setIsAuthenticated(true);
+
+        if (savedRole === "registrar" && accessListStored) {
+          const accessMap = JSON.parse(accessListStored);
+          const home = getRegistrarHomePage(accessMap);
+          navigate(home);
+        } else if (savedRole === "faculty") {
+          navigate("/faculty_dashboard");
+        } else if (savedRole === "student") {
+          navigate("/student_dashboard");
+        } else if (savedRole === "applicant") {
+          navigate("/applicant_dashboard");
+        }
       }
     } else {
-      console.log("Missing token or role");
-      setIsAuthenticated(false);
       navigate("/");
     }
   }, []);
+
+
+
 
   const [userID, setUserID] = useState("");
   const [userRole, setUserRole] = useState("");
@@ -147,7 +166,7 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
       setUserRole(role);
       setEmployeeID(empID);
 
-      if (role === "registrar", "student", "applicant", "faculty") {
+      if (["registrar", "student", "applicant", "faculty"].includes(role)) {
         fetchUserAccessList(empID);
       } else {
         window.location.href = "/login";
@@ -200,7 +219,7 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
       items.push({
         title: "Registrar Dashboard",
         path: "/registrar_dashboard",
-        icon: Dashboard,
+        icon: DashboardIcon,
         page_id: 107
       });
     }
@@ -210,10 +229,20 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
       items.push({
         title: "Enrollment Dashboard",
         path: "/enrollment_officer_dashboard",
-        icon: Business,
+        icon: DashboardIcon,
         page_id: 102
       });
     }
+
+    if (userAccessList[108]) {
+      items.push({
+        title: "Admission Office Dashboard",
+        path: "/admission_officer_dashboard",
+        icon: DashboardIcon,
+        page_id: 108
+      });
+    }
+
 
     return items;
   }
@@ -230,7 +259,7 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
   };
 
   const ROLE_PAGE_ACCESS = {
-    admission: [92, 96, 73, 1, 2, 3, 4, 5, 7, 8, 9, 11, 33, 48, 52, 61, 66, 98],
+    admission: [108, 92, 96, 73, 1, 2, 3, 4, 5, 7, 8, 9, 11, 33, 48, 52, 61, 66, 98],
     enrollment: [102, 96, 73, 6, 10, 12, 17, 36, 37, 43, 44, 45, 46, 47, 49, 60,],
     clinic: [107, 92, 96, 73, 24, 25, 26, 27, 28, 29, 30, 31, 19, 32],
     registrar: [80, 104, 38, 39, 40, 41, 42, 30, 56, 13, 50, 62, 96, 92, 59, 105, 15, 107],
@@ -697,77 +726,41 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
         <br />
         {role === "registrar" && (
           <>
-            {/* Dynamic Registrar Dashboard Options */}
-            {userAccessList[107] && (
-              <Link to="/registrar_dashboard">
-                <li
-                  className="w-full flex items-center px-2 rounded button-hover"
-                  style={{
-                    backgroundColor:
-                      location.pathname === "/registrar_dashboard"
-                        ? mainButtonColor
-                        : "transparent",
-                    color:
-                      location.pathname === "/registrar_dashboard"
-                        ? "#ffffff"
-                        : "inherit",
-                    border: `2px solid ${borderColor}`,
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (location.pathname !== "/registrar_dashboard") {
-                      e.currentTarget.style.backgroundColor = mainButtonColor;
-                      e.currentTarget.style.color = "#ffffff";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (location.pathname !== "/registrar_dashboard") {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = "inherit";
-                    }
-                  }}
-                >
-                  <Dashboard />
-                  <span className="pl-4 p-2 px-0 pointer-events-none">Registrar Dashboard</span>
-                </li>
-              </Link>
-            )}
+            {/* Dynamic Registrar Dashboards */}
+            {getRegistrarDashboardItems().map((item) => {
+              const isActive = location.pathname === item.path;
 
-            {/* If registrar also has access to Enrollment Dashboard (page_id 102) */}
-            {userAccessList[102] && (
-              <Link to="/enrollment_officer_dashboard">
-                <li
-                  className="w-full flex items-center px-2 rounded button-hover"
-                  style={{
-                    backgroundColor:
-                      location.pathname === "/enrollment_officer_dashboard"
-                        ? mainButtonColor
-                        : "transparent",
-                    color:
-                      location.pathname === "/enrollment_officer_dashboard"
-                        ? "#ffffff"
-                        : "inherit",
-                    border: `2px solid ${borderColor}`,
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (location.pathname !== "/enrollment_officer_dashboard") {
-                      e.currentTarget.style.backgroundColor = mainButtonColor;
-                      e.currentTarget.style.color = "#ffffff";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (location.pathname !== "/enrollment_officer_dashboard") {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = "inherit";
-                    }
-                  }}
-                >
-                  <Business />
-                  <span className="pl-4 p-2 px-0 pointer-events-none">Enrollment Dashboard</span>
-                </li>
-              </Link>
-            )}
+              return (
+                <Link to={item.path} key={item.page_id}>
+                  <li
+                    className="w-full flex items-center px-2 rounded button-hover"
+                    style={{
+                      backgroundColor: isActive ? mainButtonColor : "transparent",
+                      color: isActive ? "#ffffff" : "inherit",
+                      border: `2px solid ${borderColor}`,
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = mainButtonColor;
+                        e.currentTarget.style.color = "#ffffff";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = "inherit";
+                      }
+                    }}
+                  >
+                    <item.icon />
+                    <span className="pl-4 p-2 px-0 pointer-events-none">
+                      {item.title}
+                    </span>
+                  </li>
+                </Link>
+              );
+            })}
 
             {/* Grouped Menu Items */}
             {groupedMenu.map((group, idx) => (

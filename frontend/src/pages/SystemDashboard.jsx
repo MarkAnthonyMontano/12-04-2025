@@ -189,8 +189,9 @@ const SystemDashboardPanel = () => {
             <Box
               sx={{
                 borderBottom: `4px solid ${borderColor}`,
-                pb: 1,
                 mb: 2,
+                pb: 1,
+                paddingLeft: 2,
               }}
             >
               <Typography
@@ -225,7 +226,7 @@ const SystemDashboardPanel = () => {
                       </div>
 
                       {/* HOVERABLE BUTTON */}
-                   <button
+                      <button
                         className="bg-[#fef9e1] rounded-lg p-4 w-80 h-36 font-medium mt-20 ml-8 flex items-end justify-center"
                         style={{
                           border: `5px solid ${borderColor}`,

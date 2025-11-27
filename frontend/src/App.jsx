@@ -43,6 +43,7 @@ import AccountDashboard from './pages/AccountDashboard';
 import ScheduleFilterer from './pages/SchedulePlottingFilter';
 import HistoryLogs from './pages/HistoryLogs';
 import EnrollmentOfficerDashboard from './pages/EnrollmentOfficerDashboard';
+import AdmissionOfficerDashboard from './pages/AdmissionOfficerDashboard';
 
 // FACULTY FOLDER
 import GradingSheet from './faculty/GradingSheet';
@@ -363,6 +364,7 @@ function App() {
                     <Route path="/school_year_activator_panel" element={<ProtectedRoute><SchoolYearActivatorPanel /></ProtectedRoute>} />
                     <Route path="/history_logs" element={<ProtectedRoute><HistoryLogs /></ProtectedRoute>} />
                     <Route path="/enrollment_officer_dashboard" element={<ProtectedRoute><EnrollmentOfficerDashboard /></ProtectedRoute>} />
+                    <Route path="/admission_officer_dashboard" element={<ProtectedRoute><AdmissionOfficerDashboard /></ProtectedRoute>} />
                     <Route path="/grading_evaluation_for_registrar" element={<ProtectedRoute><GradingEvaluationForRegistrar /></ProtectedRoute>} />
                     <Route path="/submitted_documents" element={<ProtectedRoute><SubmittedDocuments /></ProtectedRoute>} />
                     <Route path="/requirements_form" element={<ProtectedRoute><RequirementsForm /></ProtectedRoute>} />

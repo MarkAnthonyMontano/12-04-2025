@@ -77,21 +77,32 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
 
 
 
-
-
+  function accessListToMap(list = []) {
+    const map = {};
+    list.forEach(item => {
+      const pageId = Number(item.page_id); // convert to number
+      map[pageId] = item.page_privilege === 1;
+    });
+    return map;
+  }
 
 
 
   function getRegistrarHomePage(userAccessList) {
-    // PRIORITY LIST → reorder as you want
-    if (userAccessList[107]) return "/registrar_dashboard";             // Registrar Dashboard
-    if (userAccessList[102]) return "/enrollment_officer_dashboard";    // Enrollment Dashboard
-    if (userAccessList[104]) return "/some_other_registrar_page";       // optional
+    if (userAccessList[107]) return "/registrar_dashboard";
+    if (userAccessList[102]) return "/enrollment_officer_dashboard";
+    if (userAccessList[108]) return "/admission_officer_dashboard";
 
-    // Default fallback if NONE found
+    // fallback to first allowed page
+    const firstAllowed = Object.entries(userAccessList).find(([_, v]) => v);
+    if (firstAllowed) {
+      const page = Number(firstAllowed[0]);
+      if (page === 102) return "/enrollment_officer_dashboard";
+      if (page === 108) return "/admission_officer_dashboard";
+    }
+
     return "/registrar_dashboard";
   }
-
 
 
 
@@ -176,9 +187,13 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
         setIsAuthenticated(true);
 
         if (res.data.role === "registrar") {
-          const home = getRegistrarHomePage(res.data.accessList || {});
+          const accessMap = accessListToMap(res.data.accessList);
+          localStorage.setItem("accessList", JSON.stringify(accessMap)); // ✅ Save
+          const home = getRegistrarHomePage(accessMap);
           navigate(home);
-        } else if (res.data.role === "faculty") {
+        }
+
+        else if (res.data.role === "faculty") {
           navigate("/faculty_dashboard");
         } else {
           navigate("/student_dashboard");
@@ -232,9 +247,11 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
         setLoading3(false);
         setShowOtpModal(false);
         if (tempLoginData.role === "registrar") {
-          const home = getRegistrarHomePage(tempLoginData.accessList || {});
+          const accessMap = accessListToMap(tempLoginData.accessList);
+          const home = getRegistrarHomePage(accessMap);
           navigate(home);
-        } else if (tempLoginData.role === "faculty") {
+        }
+        else if (tempLoginData.role === "faculty") {
           navigate("/faculty_dashboard");
         } else {
           navigate("/student_dashboard");

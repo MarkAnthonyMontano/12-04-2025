@@ -181,6 +181,7 @@ const AccountDashboard = () => {
                 borderBottom: `4px solid ${borderColor}`,
                 mb: 2,
                 pb: 1,
+                paddingLeft: 2,
               }}
             >
               <Typography

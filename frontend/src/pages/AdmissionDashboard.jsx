@@ -205,6 +205,7 @@ const AdmissionDashboardPanel = () => {
         height: "calc(100vh - 150px)",
         overflowY: "auto",
         paddingRight: 1,
+
         backgroundColor: "transparent",
       }}
     >
@@ -219,13 +220,11 @@ const AdmissionDashboardPanel = () => {
             {/* Group Title */}
             <Box
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
                 borderBottom: `4px solid ${borderColor}`,
-                width: "100%",
+                mb: 2,
                 pb: 1,
+                paddingLeft: 2,
+
               }}
             >
               <Typography
@@ -235,6 +234,7 @@ const AdmissionDashboardPanel = () => {
                   color: titleColor,
                   textTransform: "uppercase",
                   fontSize: "34px",
+                  paddingLeft: 2,
                 }}
               >
                 {group.label}
