@@ -174,7 +174,7 @@ const CourseManagement = () => {
 
                     {/* HOVERABLE BUTTON */}
                     <button
-                      className="bg-[#fef9e1] rounded-lg p-4 w-80 h-36 font-medium mt-20 ml-8 flex items-end justify-center"
+                      className="bg-[#fff9ec] rounded-lg p-4 w-80 h-36 font-medium mt-20 ml-8 flex items-end justify-center"
                       style={{
                         border: `5px solid ${borderColor}`,
                         color: titleColor,
@@ -187,7 +187,7 @@ const CourseManagement = () => {
                         e.currentTarget.style.border = `5px solid ${borderColor}`;
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "#fef9e1";
+                        e.currentTarget.style.backgroundColor = "#fff9ec";
                         e.currentTarget.style.color = titleColor;
                         e.currentTarget.style.border = `5px solid ${borderColor}`;
                       }}

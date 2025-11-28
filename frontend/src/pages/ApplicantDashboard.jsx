@@ -662,7 +662,7 @@ const ApplicantDashboard = (props) => {
               boxShadow: 3,
               height: "135px",
               width: "1485px",
-              backgroundColor: "#fef9e1",
+              backgroundColor: "#fff9ec",
               marginLeft: "10px",
               p: 2,
               transition: "transform 0.3s ease, box-shadow 0.3s ease",

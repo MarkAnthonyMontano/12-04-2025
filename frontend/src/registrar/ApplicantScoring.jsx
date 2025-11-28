@@ -776,8 +776,17 @@ th, td {
 
             if (res.data.success) {
                 setSnack({ open: true, message: "Excel imported successfully!", severity: "success" });
-                fetchApplicants(); // ✅ refresh scores
                 setSelectedFile(null); // reset file input
+
+                // ✅ Refresh applicants and update editScores with imported status
+                const fetched = await fetchApplicants(); // make sure fetchApplicants returns the fetched array
+                const newEditScores = {};
+                fetched.forEach(person => {
+                    if (person.status) {
+                        newEditScores[person.person_id] = { status: person.status };
+                    }
+                });
+                setEditScores(prev => ({ ...prev, ...newEditScores }));
             } else {
                 setSnack({ open: true, message: res.data.error || "Failed to import", severity: "error" });
             }
@@ -786,6 +795,7 @@ th, td {
             setSnack({ open: true, message: "Import failed: " + (err.response?.data?.error || err.message), severity: "error" });
         }
     };
+
 
     const [editScores, setEditScores] = useState({});
 

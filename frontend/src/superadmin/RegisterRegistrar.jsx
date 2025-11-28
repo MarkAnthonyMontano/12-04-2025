@@ -404,7 +404,8 @@ const RegisterRegistrar = () => {
     const handleToggleStatus = async (id, currentStatus) => {
         const newStatus = currentStatus === 1 ? 0 : 1;
         try {
-            await axios.put(`${API_BASE_URL}/update_registrar/${id}`, { status: newStatus });
+            await axios.put(`${API_BASE_URL}/update_registrar_status/${id}`, { status: newStatus });
+
             fetchRegistrars(); // 🔄 refresh list
         } catch (error) {
             console.error("❌ Error toggling status:", error);
@@ -805,7 +806,7 @@ const RegisterRegistrar = () => {
 
 
                                     {/* ✅ EDIT BUTTON */}
-                                    <TableCell sx={{ border: `2px solid ${borderColor}`, borderRight: "2px solid maroon" }}>
+                                    <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign:"center", borderRight: "2px solid maroon" }}>
                                         <Button
                                             onClick={() => handleEdit(r)}
                                             sx={{
@@ -822,7 +823,7 @@ const RegisterRegistrar = () => {
                                     </TableCell>
 
                                     {/* ✅ STATUS TOGGLE BUTTON */}
-                                    <TableCell sx={{ border: `2px solid ${borderColor}` }}>
+                                    <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center" }}>
                                         <Button
                                             onClick={() => handleToggleStatus(r.id, r.status)}
                                             sx={{

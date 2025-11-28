@@ -377,6 +377,7 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
             "&:hover": {
               transform: "scale(1.05)",
               boxShadow: 6,
+              backgroundColor: "#fff9ec"
 
             },
             marginLeft: "10px"

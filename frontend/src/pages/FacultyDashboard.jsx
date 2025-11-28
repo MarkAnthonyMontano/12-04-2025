@@ -316,6 +316,7 @@ const FacultyDashboard = ({ profileImage, setProfileImage }) => {
               boxShadow: 3,
               p: 1.5, // reduced padding
               border: `2px solid ${borderColor}`,
+              backgroundColor: "#fff9ec",
               minHeight: 100, // smaller min height
               height: "auto",
               transition: "transform 0.3s ease, box-shadow 0.3s ease",

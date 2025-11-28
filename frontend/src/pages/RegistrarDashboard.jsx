@@ -463,6 +463,7 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
               boxShadow: 3,
               height: "140px",
               marginLeft: "10px",
+              backgroundColor: "#fff9ec",
               p: 2,
               transition: "transform 0.3s ease, box-shadow 0.3s ease",
               "&:hover": {
