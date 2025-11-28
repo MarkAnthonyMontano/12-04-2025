@@ -25,6 +25,37 @@ import { SettingsContext } from "../App";
 import LoadingOverlay from "./LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
 
+const ROLE_PAGE_ACCESS = {
+  admission: [103, 92, 96, 73, 1, 2, 3, 4, 5, 7, 8, 9, 11, 33, 48, 52, 61, 66, 98],
+  enrollment: [102, 96, 73, 6, 10, 12, 17, 36, 37, 43, 44, 45, 46, 47, 49, 60,],
+  clinic: [101, 92, 96, 73, 24, 25, 26, 27, 28, 29, 30, 31, 19, 32],
+  registrar: [80, 104, 38, 39, 40, 41, 42, 30, 56, 13, 50, 62, 96, 92, 59, 105, 15, 101],
+  superadmin: "ALL"
+};
+
+function accessToSet(list = []) {
+  return new Set(list.map(Number));
+}
+
+// Determine Registrar Subtype Based on Access
+function getRegistrarDashboard(accessSet) {
+  if (accessSet.has(101)) return "/registrar_dashboard";                 // Clinic Registrar
+  if (accessSet.has(102)) return "/enrollment_officer_dashboard";     // Enrollment Registrar
+  if (accessSet.has(103)) return "/admission_officer_dashboard";      // Admission Registrar
+  return "/registrar_dashboard";                                      // Default Registrar
+}
+
+// Master router function (Only 3 roles)
+function getUserDashboard(role, accessList = []) {
+  const accessSet = accessToSet(accessList);
+
+  if (role === "registrar") {
+    return getRegistrarDashboard(accessSet);
+  }
+  if (role === "faculty") return "/faculty_dashboard";
+  return "/student_dashboard"; // default if not registrar or faculty
+}
+
 const LoginEnrollment = ({ setIsAuthenticated }) => {
   const settings = useContext(SettingsContext);
 
@@ -74,40 +105,6 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
   const logoSrc = settings?.logo_url
     ? `${API_BASE_URL}${settings.logo_url}`
     : Logo;
-
-
-
-  function accessListToMap(list = []) {
-    const map = {};
-    list.forEach(item => {
-      const pageId = Number(item.page_id); // convert to number
-      map[pageId] = item.page_privilege === 1;
-    });
-    return map;
-  }
-
-
-
-  function getRegistrarHomePage(userAccessList) {
-    if (userAccessList[107]) return "/registrar_dashboard";
-    if (userAccessList[102]) return "/enrollment_officer_dashboard";
-    if (userAccessList[108]) return "/admission_officer_dashboard";
-
-    // fallback to first allowed page
-    const firstAllowed = Object.entries(userAccessList).find(([_, v]) => v);
-    if (firstAllowed) {
-      const page = Number(firstAllowed[0]);
-      if (page === 102) return "/enrollment_officer_dashboard";
-      if (page === 108) return "/admission_officer_dashboard";
-    }
-
-    return "/registrar_dashboard";
-  }
-
-
-
-
-
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -186,18 +183,8 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
 
         setIsAuthenticated(true);
 
-        if (res.data.role === "registrar") {
-          const accessMap = accessListToMap(res.data.accessList);
-          localStorage.setItem("accessList", JSON.stringify(accessMap)); // ✅ Save
-          const home = getRegistrarHomePage(accessMap);
-          navigate(home);
-        }
-
-        else if (res.data.role === "faculty") {
-          navigate("/faculty_dashboard");
-        } else {
-          navigate("/student_dashboard");
-        }
+        const dashboard = getUserDashboard(res.data.role, res.data.accessList);
+        navigate(dashboard); return;
 
         return;
       }
@@ -246,17 +233,8 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
       setTimeout(() => {
         setLoading3(false);
         setShowOtpModal(false);
-        if (tempLoginData.role === "registrar") {
-          const accessMap = accessListToMap(tempLoginData.accessList);
-          const home = getRegistrarHomePage(accessMap);
-          navigate(home);
-        }
-        else if (tempLoginData.role === "faculty") {
-          navigate("/faculty_dashboard");
-        } else {
-          navigate("/student_dashboard");
-        }
-
+        const dashboard = getUserDashboard(tempLoginData.role, tempLoginData.accessList);
+        navigate(dashboard);
       }, 2000);
     } catch (err) {
       setSnack({

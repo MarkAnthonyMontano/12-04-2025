@@ -238,8 +238,8 @@ const RegisterRegistrar = () => {
     const ROLE_PAGE_ACCESS = {
         admission: [103, 92, 96, 73, 1, 2, 3, 4, 5, 7, 8, 9, 11, 33, 48, 52, 61, 66, 98],
         enrollment: [102, 96, 73, 6, 10, 12, 17, 36, 37, 43, 44, 45, 46, 47, 49, 60,],
-        clinic: [107, 92, 96, 73, 24, 25, 26, 27, 28, 29, 30, 31, 19, 32],
-        registrar: [80, 104, 38, 39, 40, 41, 42, 30, 56, 13, 50, 62, 96, 92, 59, 105, 15, 107],
+        clinic: [101, 92, 96, 73, 24, 25, 26, 27, 28, 29, 30, 31, 19, 32],
+        registrar: [80, 104, 38, 39, 40, 41, 42, 30, 56, 13, 50, 62, 96, 92, 59, 105, 15, 101],
         superadmin: ALL
     };
 
@@ -291,62 +291,43 @@ const RegisterRegistrar = () => {
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
-
-
-
-
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
             const fd = new FormData();
 
-            // Append all fields
+            // append all fields
             Object.entries(form).forEach(([key, value]) => {
                 if (value !== null && value !== undefined) {
                     fd.append(key, value);
                 }
             });
 
-            // ============================================
-            // ✅ FIX: Department is optional
-            // ============================================
-            if (form.dprtmnt_id === "" || form.dprtmnt_id === null || form.dprtmnt_id === undefined) {
-                fd.set("dprtmnt_id", "");
-            } else {
-                fd.set("dprtmnt_id", Number(form.dprtmnt_id));
-            }
+            // Ensure numbers
+            if (form.dprtmnt_id) fd.set("dprtmnt_id", Number(form.dprtmnt_id));
+            if (form.status) fd.set("status", Number(form.status));
 
-            // ============================================
-            // FIX: Status must always be numeric
-            // ============================================
-            if (form.status !== "" && form.status !== null && form.status !== undefined) {
-                fd.set("status", Number(form.status));
-            }
-
-            console.log("📌 FORM DATA VALUES:");
+            // Debug
             for (let pair of fd.entries()) console.log(pair[0], pair[1]);
 
-            // ============================================
-            // 🔧 EDIT MODE
-            // ============================================
             if (editData) {
+                // EDIT registrar
                 await axios.put(`${API_BASE_URL}/update_registrar/${editData.id}`, fd, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
 
+                // ✅ SUCCESS SNACKBAR
                 setSnackbarMessage("Registrar updated successfully.");
                 setSnackbarSeverity("success");
-            }
 
-            // ============================================
-            // ➕ ADD NEW REGISTRAR
-            // ============================================
-            else {
+            } else {
+                // ADD registrar
                 await axios.post(`${API_BASE_URL}/register_registrar`, fd, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
 
+                // ✅ SUCCESS SNACKBAR
                 setSnackbarMessage("Registrar added successfully.");
                 setSnackbarSeverity("success");
             }
@@ -361,21 +342,20 @@ const RegisterRegistrar = () => {
 
             const backendMessage = err.response?.data?.message;
 
+            // ERROR MESSAGES
             if (backendMessage === "Email already exists") {
                 setSnackbarMessage("Email already exists. Please use a different email.");
-            }
-            else if (backendMessage === "All required fields must be filled") {
+            } else if (backendMessage === "All required fields must be filled") {
                 setSnackbarMessage("Please complete all required fields before submitting.");
-            }
-            else {
+            } else {
                 setSnackbarMessage(backendMessage || "Something went wrong. Please try again.");
             }
 
+            // ✅ ERROR SNACKBAR
             setSnackbarSeverity("error");
             setOpenSnackbar(true);
         }
     };
-
 
     const handleEdit = (r) => {
         setEditData(r);
@@ -387,10 +367,8 @@ const RegisterRegistrar = () => {
             email: r.email || "",
             password: "",
             role: r.role,
-            status: Number(r.status),
-            dprtmnt_id: r.dprtmnt_id === null ? null : r.dprtmnt_id,
-            profile_picture: null,
-            preview: r.profile_picture ? `${API_BASE_URL}/uploads/${r.profile_picture}` : ""
+            status: Number(r.status), // ✅ ensure numeric
+            dprtmnt_id: r.dprtmnt_id || "",
         });
         setOpenDialog(true);
     };
@@ -423,35 +401,16 @@ const RegisterRegistrar = () => {
         document.body.removeChild(link);
     };
 
-    const handleToggleStatus = async (id, currentStatus, registrar) => {
+    const handleToggleStatus = async (id, currentStatus) => {
         const newStatus = currentStatus === 1 ? 0 : 1;
-
         try {
-            const fd = new FormData();
-            fd.append("status", newStatus);
-
-            // Send all existing values so backend doesn't break
-            fd.append("employee_id", registrar.employee_id);
-            fd.append("first_name", registrar.first_name);
-            fd.append("middle_name", registrar.middle_name || "");
-            fd.append("last_name", registrar.last_name);
-            fd.append("role", registrar.role);
-            fd.append("email", registrar.email);
-            fd.append("dprtmnt_id", registrar.dprtmnt_id || "");
-
-            await axios.put(`${API_BASE_URL}/update_registrar/${id}`, fd, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            fetchRegistrars();
+            await axios.put(`${API_BASE_URL}/update_registrar/${id}`, { status: newStatus });
+            fetchRegistrars(); // 🔄 refresh list
         } catch (error) {
             console.error("❌ Error toggling status:", error);
             setErrorMessage("Failed to update status");
         }
     };
-
-
-
 
 
 
@@ -836,7 +795,7 @@ const RegisterRegistrar = () => {
                                     <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>{r.email}</TableCell>
 
                                     <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
-                                        {r.dprtmnt_name}
+                                        {r.dprtmnt_name || "N/A"}
                                     </TableCell>
 
                                     <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
@@ -865,7 +824,7 @@ const RegisterRegistrar = () => {
                                     {/* ✅ STATUS TOGGLE BUTTON */}
                                     <TableCell sx={{ border: `2px solid ${borderColor}` }}>
                                         <Button
-                                            onClick={() => handleToggleStatus(r.id, r.status, r)}
+                                            onClick={() => handleToggleStatus(r.id, r.status)}
                                             sx={{
                                                 backgroundColor: r.status === 1 ? "green" : "maroon",
                                                 color: "white",
@@ -879,7 +838,6 @@ const RegisterRegistrar = () => {
                                         >
                                             {r.status === 1 ? "Active" : "Inactive"}
                                         </Button>
-
                                     </TableCell>
 
 
@@ -1002,32 +960,23 @@ const RegisterRegistrar = () => {
                         />
 
                         {/* 🔹 Department Dropdown */}
-                        <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                            <InputLabel>Department (Optional)</InputLabel>
+                        <FormControl fullWidth>
+                            <InputLabel id="department-label">Department</InputLabel>
                             <Select
+                                labelId="department-label"
                                 name="dprtmnt_id"
-                                value={form.dprtmnt_id === null ? "" : form.dprtmnt_id}
-                                onChange={(e) => {
-                                    setForm({
-                                        ...form,
-                                        dprtmnt_id: e.target.value === "" ? null : Number(e.target.value)
-                                    });
-                                }}
-                                label="Department (Optional)"
+                                value={form.dprtmnt_id}
+                                label="Department"
+                                onChange={handleChange}
                             >
-                                {/* NULL OPTION */}
-                                <MenuItem value="">
-                                    <em>No Department</em>
-                                </MenuItem>
-
-                                {department.map((d) => (
-                                    <MenuItem key={d.dprtmnt_id} value={d.dprtmnt_id}>
-                                        {d.dprtmnt_name}
+                                <MenuItem value="">Select Department</MenuItem>
+                                {department.map((dep) => (
+                                    <MenuItem key={dep.dprtmnt_id} value={dep.dprtmnt_id}>
+                                        {dep.dprtmnt_name} ({dep.dprtmnt_code})
                                     </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
-
                         <FormControl fullWidth>
                             <InputLabel id="role-select-label">Select Role</InputLabel>
                             <Select

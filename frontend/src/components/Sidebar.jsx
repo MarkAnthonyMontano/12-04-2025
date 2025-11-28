@@ -80,82 +80,66 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
     lname: "",
     role: "",
   });
-  // 1️⃣ Define the helper function first
-  function getRegistrarHomePage(userAccessList) {
-    if (userAccessList[107]) return "/registrar_dashboard";
-    if (userAccessList[102]) return "/enrollment_officer_dashboard";
-    if (userAccessList[108]) return "/admission_officer_dashboard";
-
-    const firstAllowed = Object.entries(userAccessList).find(([_, v]) => v);
-    if (firstAllowed) {
-      const page = Number(firstAllowed[0]);
-      if (page === 102) return "/enrollment_officer_dashboard";
-      if (page === 108) return "/admission_officer_dashboard";
-    }
-
-    return "/registrar_dashboard";
-  }
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     const savedRole = localStorage.getItem("role");
     const storedID = localStorage.getItem("person_id");
-    const accessListStored = localStorage.getItem("accessList");
 
     if (token && savedRole && storedID) {
-      const decoded = JSON.parse(atob(token.split(".")[1]));
-      const currentTime = Date.now() / 1000;
+      try {
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        const currentTime = Date.now() / 1000;
 
-      if (decoded.exp < currentTime) {
-        localStorage.clear();
+        if (decoded.exp < currentTime) {
+          // Token expired
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          localStorage.removeItem("person_id");
+          setIsAuthenticated(false);
+          navigate("/");
+        } else {
+          setRole(savedRole); // ✅ Load from saved value
+          fetchPersonData(storedID, savedRole);
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        console.log("Token decode error:", err);
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
         setIsAuthenticated(false);
         navigate("/");
-        return;
       }
-
-      setRole(savedRole);
-      fetchPersonData(storedID, savedRole);
-      setIsAuthenticated(true);
-
-      // ⭐ FIXED: Determine correct dashboard for registrar-type accounts
-      if (savedRole === "registrar" && accessListStored) {
-        const accessMap = JSON.parse(accessListStored);
-
-        if (accessMap[107]) navigate("/registrar_dashboard");
-        else if (accessMap[102]) navigate("/enrollment_officer_dashboard");
-        else if (accessMap[103]) navigate("/admission_officer_dashboard");
-        return;
-      }
-
-      if (savedRole === "faculty") {
-        navigate("/faculty_dashboard");
-        return;
-      }
-
-      if (savedRole === "student") {
-        navigate("/student_dashboard");
-        return;
-      }
-
-      if (savedRole === "applicant") {
-        navigate("/applicant_dashboard");
-        return;
-      }
-
     } else {
+      console.log("Missing token or role");
+      setIsAuthenticated(false);
       navigate("/");
     }
   }, []);
-
-
-
-
 
   const [userID, setUserID] = useState("");
   const [userRole, setUserRole] = useState("");
   const [employeeID, setEmployeeID] = useState("");
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(false);
+
+
+  // Convert access list object to Set()
+  function accessObjToSet(userAccessList) {
+    const set = new Set();
+    for (const k in userAccessList) {
+      if (userAccessList[k]) set.add(Number(k));
+    }
+    return set;
+  }
+
+  // Duplicate registrar dashboard logic from LoginEnrollment
+  function getRegistrarDashboard(accessSet) {
+    if (accessSet.has(101)) return "/registrar_dashboard";                 // Clinic Registrar
+    if (accessSet.has(102)) return "/enrollment_officer_dashboard";        // Enrollment Registrar
+    if (accessSet.has(103)) return "/admission_officer_dashboard";         // Admission Registrar
+    return "/registrar_dashboard";
+  }
 
   // ✅ Access List Map
   const [userAccessList, setUserAccessList] = useState({});
@@ -181,7 +165,7 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
       setUserRole(role);
       setEmployeeID(empID);
 
-      if (["registrar", "student", "applicant", "faculty"].includes(role)) {
+      if (role === "registrar", "student", "applicant", "faculty") {
         fetchUserAccessList(empID);
       } else {
         window.location.href = "/login";
@@ -213,8 +197,6 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
     {
 
       items: [
-
-
         { title: "Admission Management", path: "/admission_dashboard", icon: Business, page_id: 92 },
         { title: "Course Management", path: "/course_management", icon: LibraryBooks, page_id: 93 },
         { title: "Department Management", path: "/department_dashboard", icon: Apartment, page_id: 94 },
@@ -224,44 +206,6 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
       ],
     },
   ];
-
-  // Returns dynamic dashboard options based on registrar's page access
-  function getRegistrarDashboardItems() {
-    const items = [];
-
-    // Registrar Dashboard (page_id 106)
-    if (userAccessList[107]) {
-      items.push({
-        title: "Registrar Dashboard",
-        path: "/registrar_dashboard",
-        icon: DashboardIcon,
-        page_id: 107
-      });
-    }
-
-    // Enrollment Dashboard (page_id 102)
-    if (userAccessList[102]) {
-      items.push({
-        title: "Enrollment Dashboard",
-        path: "/enrollment_officer_dashboard",
-        icon: DashboardIcon,
-        page_id: 102
-      });
-    }
-
-    if (userAccessList[108]) {
-      items.push({
-        title: "Admission Office Dashboard",
-        path: "/admission_officer_dashboard",
-        icon: DashboardIcon,
-        page_id: 108
-      });
-    }
-
-
-    return items;
-  }
-
 
   const ALL = Array.from({ length: 100 }, (_, i) => i + 1);
 
@@ -274,13 +218,31 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
   };
 
   const ROLE_PAGE_ACCESS = {
-    admission: [108, 92, 96, 73, 1, 2, 3, 4, 5, 7, 8, 9, 11, 33, 48, 52, 61, 66, 98],
+    admission: [103, 92, 96, 73, 1, 2, 3, 4, 5, 7, 8, 9, 11, 33, 48, 52, 61, 66, 98],
     enrollment: [102, 96, 73, 6, 10, 12, 17, 36, 37, 43, 44, 45, 46, 47, 49, 60,],
-    clinic: [107, 92, 96, 73, 24, 25, 26, 27, 28, 29, 30, 31, 19, 32],
-    registrar: [80, 104, 38, 39, 40, 41, 42, 30, 56, 13, 50, 62, 96, 92, 59, 105, 15, 107],
+    clinic: [101, 92, 96, 73, 24, 25, 26, 27, 28, 29, 30, 31, 19, 32],
+    registrar: [80, 104, 38, 39, 40, 41, 42, 30, 56, 13, 50, 62, 96, 92, 59, 105, 15, 101],
     superadmin: ALL
   };
 
+  function determineRoleFromPageAccess(accessList, ROLE_PAGE_ACCESS) {
+    // Sort arrays to ensure order doesn't affect comparison
+    const sortedAccess = [...accessList].sort((a, b) => a - b);
+
+    for (let role in ROLE_PAGE_ACCESS) {
+      const allowedPages = [...ROLE_PAGE_ACCESS[role]].sort((a, b) => a - b);
+
+      // Strict match: lengths must match and all elements must match
+      if (
+        sortedAccess.length === allowedPages.length &&
+        sortedAccess.every((pageId, idx) => pageId === allowedPages[idx])
+      ) {
+        return ROLE_LABEL[role];
+      }
+    }
+
+    return "Administrator"; // No exact match
+  }
 
 
   const [determinedRole, setDeterminedRole] = useState("");
@@ -720,95 +682,92 @@ const SideBar = ({ setIsAuthenticated, profileImage, setProfileImage }) => {
         <br />
         <hr className="bg-maroon-500" />
         <br />
-        {role === "registrar" && (
-          <>
-            {/* Dynamic Registrar Dashboards */}
-            {getRegistrarDashboardItems().map((item) => {
-              const isActive = location.pathname === item.path;
+        {role === "registrar" && (() => {
+          const accessSet = accessObjToSet(userAccessList);
+          const registrarDashboard = getRegistrarDashboard(accessSet);
+          const isActive = location.pathname === registrarDashboard;
 
-              return (
-                <Link to={item.path} key={item.page_id}>
-                  <li
-                    className="w-full flex items-center px-2 rounded button-hover"
-                    style={{
-                      backgroundColor: isActive ? mainButtonColor : "transparent",
-                      color: isActive ? "#ffffff" : "inherit",
-                      border: `2px solid ${borderColor}`,
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = mainButtonColor;
-                        e.currentTarget.style.color = "#ffffff";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.color = "inherit";
-                      }
-                    }}
-                  >
-                    <item.icon />
-                    <span className="pl-4 p-2 px-0 pointer-events-none">
-                      {item.title}
-                    </span>
-                  </li>
-                </Link>
-              );
-            })}
-
-            {/* Grouped Menu Items */}
-            {groupedMenu.map((group, idx) => (
-              <div key={idx}>
-                <h6
-                  className="mt-2 mb-2 px-2"
-                  style={{ color: mainButtonColor, fontWeight: 600 }}
+          return (
+            <>
+              {/* Registrar Dashboard */}
+              <Link to={registrarDashboard}>
+                <li
+                  className="w-full flex items-center px-2 rounded button-hover"
+                  style={{
+                    backgroundColor: isActive ? mainButtonColor : "transparent",
+                    color: isActive ? "#ffffff" : "inherit",
+                    border: `2px solid ${borderColor}`,
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = mainButtonColor;
+                      e.currentTarget.style.color = "#ffffff";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "inherit";
+                    }
+                  }}
                 >
-                  {group.label}
-                </h6>
+                  <Dashboard />
+                  <span className="pl-4 p-2 px-0 pointer-events-none">Dashboard</span>
+                </li>
+              </Link>
 
-                {group.items.map((item) => {
-                  if (!userAccessList[item.page_id]) return null;
+              {/* Grouped Menu Items */}
+              {groupedMenu.map((group, idx) => (
+                <div key={idx}>
+                  <h6
+                    className="mt-2 mb-2 px-2"
+                    style={{ color: mainButtonColor, fontWeight: 600 }}
+                  >
+                    {group.label}
+                  </h6>
 
-                  const isActive = location.pathname === item.path;
+                  {group.items.map((item) => {
+                    if (!userAccessList[item.page_id]) return null;
 
-                  return (
-                    <Link to={item.path} key={item.page_id}>
-                      <li
-                        className="w-full flex items-center px-2 rounded m-2 mx-0 button-hover"
-                        style={{
-                          backgroundColor: isActive ? mainButtonColor : "transparent",
-                          color: isActive ? "#ffffff" : "inherit",
-                          border: `2px solid ${borderColor}`,
-                          cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.backgroundColor = mainButtonColor;
-                            e.currentTarget.style.color = "#ffffff";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) {
-                            e.currentTarget.style.backgroundColor = "transparent";
-                            e.currentTarget.style.color = "inherit";
-                          }
-                        }}
-                      >
-                        <item.icon />
-                        <span className="pl-4 p-2 px-0 pointer-events-none">
-                          {item.title}
-                        </span>
-                      </li>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </>
-        )}
+                    const isActive = location.pathname === item.path;
 
+                    return (
+                      <Link to={item.path} key={item.page_id}>
+                        <li
+                          className="w-full flex items-center px-2 rounded m-2 mx-0 button-hover"
+                          style={{
+                            backgroundColor: isActive ? mainButtonColor : "transparent",
+                            color: isActive ? "#ffffff" : "inherit",
+                            border: `2px solid ${borderColor}`,
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = mainButtonColor;
+                              e.currentTarget.style.color = "#ffffff";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.color = "inherit";
+                            }
+                          }}
+                        >
+                          <item.icon />
+                          <span className="pl-4 p-2 px-0 pointer-events-none">
+                            {item.title}
+                          </span>
+                        </li>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
+            </>
+          );
+        })()}
 
         {role === "applicant" && (
           <>
