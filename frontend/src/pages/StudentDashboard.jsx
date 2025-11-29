@@ -373,11 +373,12 @@ const StudentDashboard = ({ profileImage, setProfileImage }) => {
         {/* Student Information */}
         <Grid item xs={12}>
           <Card sx={{
+            backgroundColor: "#fff9ec",
             borderRadius: 1, boxShadow: 3, p: 1, border: `2px solid ${borderColor}`, height: "260px", transition: "transform 0.3s ease, box-shadow 0.3s ease",
             "&:hover": {
               transform: "scale(1.05)",
               boxShadow: 6,
-              backgroundColor: "#fff9ec"
+              
 
             },
             marginLeft: "10px"

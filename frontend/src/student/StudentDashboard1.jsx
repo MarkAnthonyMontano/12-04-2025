@@ -1079,7 +1079,6 @@ const StudentDashboard1 = () => {
                                     labelId="campus-label"
                                     id="campus-select"
                                     name="campus"
-                                    readOnly
                                     value={person.campus == null ? "" : String(person.campus)}
                                     label="Campus (Manila/Cavite)"
                                     onChange={(e) => {
@@ -1114,7 +1113,6 @@ const StudentDashboard1 = () => {
                                     labelId="academic-program-label"
                                     id="academic-program-select"
                                     name="academicProgram"
-                                    readOnly
                                     value={person.academicProgram || ""}
                                     label="Academic Program"
                                     onChange={handleChange}
@@ -1139,7 +1137,6 @@ const StudentDashboard1 = () => {
                                     labelId="classified-as-label"
                                     id="classified-as-select"
                                     name="classifiedAs"
-                                    readOnly
                                     value={person.classifiedAs || ""}
                                     label="Classified As"
                                     onChange={handleChange}
@@ -1167,7 +1164,6 @@ const StudentDashboard1 = () => {
                                     labelId="applying-as-label"
                                     id="applying-as-select"
                                     name="applyingAs"
-                                    readOnly
                                     value={person.applyingAs || ""}
                                     label="Applying As"
                                     onChange={handleChange}
@@ -1449,7 +1445,6 @@ const StudentDashboard1 = () => {
 
                                     value={person.nickname}
                                     onChange={handleChange}
-                                    readOnly
                                     onBlur={handleBlur}
                                     placeholder="Enter your Nickname"
                                     error={errors.nickname}
@@ -1614,7 +1609,7 @@ const StudentDashboard1 = () => {
                                 control={
 
                                     <Checkbox
-                                        disabled
+                                        
                                         checked={person.pwdMember === 1}
                                         onChange={handlePwdCheck}
                                         inputProps={{ "aria-label": "PWD Checkbox" }}
@@ -1674,7 +1669,6 @@ const StudentDashboard1 = () => {
                                         size="small"
                                         label="PWD ID"
                                         name="pwdId"
-                                        disabled
                                         value={person.pwdId || ""}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
@@ -1750,7 +1744,7 @@ const StudentDashboard1 = () => {
                                 <Typography mb={1} fontWeight="medium">
                                     Language/Dialect Spoken
                                 </Typography>
-                                <TextField fullWidth size="small" InputProps={{ readOnly: true }}
+                                <TextField fullWidth size="small" 
                                     name="languageDialectSpoken" placeholder="Enter your Language Spoken" value={person.languageDialectSpoken || ""} required onBlur={handleBlur} onChange={handleChange} error={!!errors.languageDialectSpoken}
                                     helperText={errors.languageDialectSpoken ? "This field is required." : ""}
                                 />
@@ -1912,7 +1906,6 @@ const StudentDashboard1 = () => {
                                     <Select
                                         labelId="religion-label"
                                         id="religion"
-                                        readOnly
                                         name="religion"
                                         value={person.religion || ""}
                                         onChange={handleChange}

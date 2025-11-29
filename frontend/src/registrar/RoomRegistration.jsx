@@ -128,12 +128,11 @@ const RoomRegistration = () => {
 
   const tabs = [
 
-   
+
     { label: "Room Registration", to: "/room_registration", icon: <KeyIcon fontSize="large" /> },
     { label: "Entrance Exam Room Assignment", to: "/assign_entrance_exam", icon: <MeetingRoomIcon fontSize="large" /> },
     { label: "Entrance Exam Schedule Management", to: "/assign_schedule_applicant", icon: <ScheduleIcon fontSize="large" /> },
     { label: "Proctor's Applicant List", to: "/proctor_applicant_list", icon: <PeopleIcon fontSize="large" /> },
-    { label: "Entrance Examination Scores", to: "/applicant_scoring", icon: <FactCheckIcon fontSize="large" /> },
     { label: "Announcement", to: "/announcement_for_admission", icon: <CampaignIcon fontSize="large" /> },
 
 
@@ -353,7 +352,7 @@ const RoomRegistration = () => {
           justifyContent: "space-between",
           flexWrap: "nowrap", // ❌ prevent wrapping
           width: "100%",
-          mt: 3,
+          mt: 1,
           gap: 2,
         }}
       >
@@ -378,7 +377,7 @@ const RoomRegistration = () => {
                   : "0px 2px 6px rgba(0,0,0,0.15)",
               transition: "0.3s ease",
               "&:hover": {
-                backgroundColor: activeStep === index ? "#000" : "#f5d98f",
+                backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
               },
             }}
           >

@@ -838,9 +838,11 @@ const StudentDashboard3 = () => {
                                     <Select
                                         labelId="schoolLevel1-label"
                                         id="schoolLevel1"
-                                        readOnly
+                                        
                                         name="schoolLevel1"
                                         value={person.schoolLevel1 ?? ""}
+                                        onChange={handleChange}
+                                        onBlur={() => handleUpdate(person)}
                                         label="School Level"
 
                                     >
@@ -865,12 +867,13 @@ const StudentDashboard3 = () => {
                                     fullWidth
                                     size="small"
                                     required
-                                    InputProps={{ readOnly: true }}
+                                    
 
                                     name="schoolLastAttended1"
                                     placeholder="Enter School Last Attended"
                                     value={person.schoolLastAttended1}
-
+                                    onChange={handleChange}
+                                    onBlur={() => handleUpdate(person)}
                                     error={errors.schoolLastAttended1}
                                     helperText={errors.schoolLastAttended1 ? "This field is required." : ""}
                                 />
@@ -886,11 +889,12 @@ const StudentDashboard3 = () => {
                                     size="small"
                                     required
                                     name="schoolAddress1"
-                                    InputProps={{ readOnly: true }}
+                                   
 
                                     placeholder="Enter your School Address"
                                     value={person.schoolAddress1}
-
+                                    onChange={handleChange}
+                                    onBlur={() => handleUpdate(person)}
                                     error={errors.schoolAddress1}
                                     helperText={errors.schoolAddress1 ? "This field is required." : ""}
                                 />
@@ -905,12 +909,13 @@ const StudentDashboard3 = () => {
                                     fullWidth
                                     size="small"
                                     required
-                                    InputProps={{ readOnly: true }}
+                                   
 
                                     name="courseProgram1"
                                     placeholder="Enter your Course Program"
                                     value={person.courseProgram1}
-
+                                    onChange={handleChange}
+                                    onBlur={() => handleUpdate(person)}
                                     error={errors.courseProgram1}
                                     helperText={errors.courseProgram1 ? "This field is required." : ""}
                                 />
@@ -934,11 +939,12 @@ const StudentDashboard3 = () => {
                                     size="small"
                                     required
                                     name="honor1"
-                                    InputProps={{ readOnly: true }}
+                                    
 
                                     placeholder="Enter your Recognition / Awards"
                                     value={person.honor1}
-
+                                    onChange={handleChange}
+                                    onBlur={() => handleUpdate(person)}
                                     error={errors.honor1}
                                     helperText={errors.honor1 ? "This field is required." : ""}
                                 />
@@ -953,12 +959,13 @@ const StudentDashboard3 = () => {
                                     fullWidth
                                     size="small"
                                     required
-                                    InputProps={{ readOnly: true }}
+                                   
 
                                     name="generalAverage1"
                                     placeholder="Enter your General Average"
                                     value={person.generalAverage1}
-
+                                    onChange={handleChange}
+                                    onBlur={() => handleUpdate(person)}
                                     error={errors.generalAverage1}
                                     helperText={errors.generalAverage1 ? "This field is required." : ""}
                                 />
@@ -973,12 +980,13 @@ const StudentDashboard3 = () => {
                                     fullWidth
                                     size="small"
                                     required
-                                    InputProps={{ readOnly: true }}
+                                    
 
                                     name="yearGraduated1"
                                     placeholder="Enter your Year Graduated"
                                     value={person.yearGraduated1}
-
+                                    onChange={handleChange}
+                                    onBlur={() => handleUpdate(person)}
                                     error={errors.yearGraduated1}
                                     helperText={errors.yearGraduated1 ? "This field is required." : ""}
                                 />
@@ -998,8 +1006,10 @@ const StudentDashboard3 = () => {
                                 labelId="strand-label"
                                 id="strand-select"
                                 name="strand"
-                                readOnly
+                               
                                 value={person.strand ?? ""}
+                                onChange={handleChange}
+                                onBlur={() => handleUpdate(person)}
                                 label="Strand"
 
                             >

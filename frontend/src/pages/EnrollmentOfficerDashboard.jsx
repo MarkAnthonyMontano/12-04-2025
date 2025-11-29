@@ -440,6 +440,7 @@ const EnrollingOfficerDashboard = ({ profileImage, setProfileImage }) => {
                             boxShadow: 3,
                             height: "140px",
                             marginLeft: "10px",
+                            backgroundColor: "#fff9ec",
                             p: 2,
                             width: "99%",
                             borderRadius: 3,

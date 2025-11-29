@@ -169,26 +169,6 @@ const StudentDashboard5 = () => {
     });
   }, [queryPersonId]);
 
-  // Fetch person by ID (when navigating with ?person_id=... or sessionStorage)
-  useEffect(() => {
-    const fetchPersonById = async () => {
-      if (!userID) return;
-
-      try {
-        const res = await axios.get(`${API_BASE_URL}/api/student_data_as_applicant/${userID}`);
-        if (res.data) {
-          setPerson(res.data);
-          setSelectedPerson(res.data);
-        } else {
-          console.warn("⚠️ No person found for ID:", userID);
-        }
-      } catch (err) {
-        console.error("❌ Failed to fetch person by ID:", err);
-      }
-    };
-
-    fetchPersonById();
-  }, [userID]);
 
 
   // Fetch person by ID (when navigating with ?person_id=... or sessionStorage)

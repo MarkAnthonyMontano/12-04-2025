@@ -59,8 +59,14 @@ const EvaluationCRUD = () => {
     const [selectedSchoolSemester, setSelectedSchoolSemester] = useState('');
     const [selectedActiveSchoolYear, setSelectedActiveSchoolYear] = useState('');
     const [selectedId, setSelectedId] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+    const [categoryEditMode, setCategoryEditMode] = useState(false);
+    const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+    const [categoryFormData, setCategoryFormData] = useState({ title: "", description: "" });
     const [questions, setQuestions] = useState([]);
     const [formData, setFormData] = useState({
+        category: "",
         question: "",
         choice1: "",
         choice2: "",
@@ -68,6 +74,7 @@ const EvaluationCRUD = () => {
         choice4: "",
         choice5: ""
     });
+
 
     const [userID, setUserID] = useState("");
     const [user, setUser] = useState("");
@@ -131,6 +138,15 @@ const EvaluationCRUD = () => {
         }
     };
 
+    const fetchCategories = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/get_category`);
+            setCategories(response.data);
+        } catch (err) {
+            console.error("Error fetching categories:", err);
+        }
+    };
+
     const maxButtonsToShow = 5;
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(50);
@@ -140,6 +156,7 @@ const EvaluationCRUD = () => {
 
     useEffect(() => {
         fetchQuestions();
+        fetchCategories();
     }, []);
 
     useEffect(() => {
@@ -226,8 +243,19 @@ const EvaluationCRUD = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleCategoryChange = (e) => {
+        setCategoryFormData({ ...categoryFormData, [e.target.name]: e.target.value });
+    };
+
     const handleCloseDialog = () => {
         setOpenDialog(false);
+    };
+
+    const handleCategoryDialogClose = () => {
+        setCategoryDialogOpen(false);
+        setCategoryEditMode(false);
+        setCategoryFormData({ title: "", description: "" });
+        setSelectedCategoryId(null);
     };
 
     const handleSaveQuestion = async () => {
@@ -247,7 +275,7 @@ const EvaluationCRUD = () => {
                 setSnackbarMessage(response.data.message);
                 setOpenSnackbar(true);
             }
-            setFormData({ question: "", choice1: "", choice2: "", choice3: "", choice4: "", choice5: "" });
+            setFormData({ category: "", question: "", choice1: "", choice2: "", choice3: "", choice4: "", choice5: "" });
             setOpenDialog(false);
             setEditMode(false);
             setSelectedId(null);
@@ -258,8 +286,27 @@ const EvaluationCRUD = () => {
         }
     };
 
+    const handleSaveCategory = async () => {
+        try {
+            if (categoryEditMode) {
+            await axios.put(`${API_BASE_URL}/update_category/${selectedCategoryId}`, categoryFormData);
+            setSnackbarMessage("Category updated successfully");
+            } else {
+            await axios.post(`${API_BASE_URL}/insert_category`, categoryFormData);
+            setSnackbarMessage("Category created successfully");
+            }
+            setOpenSnackbar(true);
+            handleCategoryDialogClose();
+            fetchCategories();
+        } catch (err) {
+            console.error(err);
+            alert("Failed to save category");
+        }
+    };
+
     const handleEdit = (question) => {
         setFormData({
+            category: question.category,
             question: question.question_description,
             choice1: question.first_choice,
             choice2: question.second_choice,
@@ -270,6 +317,13 @@ const EvaluationCRUD = () => {
         setSelectedId(question.question_id);
         setEditMode(true);
         setOpenDialog(true);
+    };
+
+    const handleEditCategory = (cat) => {
+      setCategoryFormData({ title: cat.title, description: cat.description });
+      setSelectedCategoryId(cat.id);
+      setCategoryEditMode(true);
+      setCategoryDialogOpen(true);
     };
 
     // 🔒 Disable right-click
@@ -343,7 +397,7 @@ const EvaluationCRUD = () => {
                                                 backgroundColor: "transparent",
                                                 '&:hover': {
                                                     borderColor: 'white',
-                                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                                      backgroundColor: 'rgba(255,255,255,0.1)',
                                                 },
                                                 '&.Mui-disabled': {
                                                     color: "white",
@@ -482,7 +536,7 @@ const EvaluationCRUD = () => {
                         </TableRow>
                     </TableHead>
                 </Table>
-            </TableContainer>
+            </TableContainer>     
             <TableContainer
                 component={Paper}
                 sx={{
@@ -521,6 +575,16 @@ const EvaluationCRUD = () => {
                                     >
                                         Add Evaluation Question
                                     </Button>
+
+                                    <Button
+                                        startIcon={<AddIcon />}
+                                        variant="contained"
+                                        sx={{ backgroundColor: "#1967d2", color: "white" }}
+                                        onClick={() => setCategoryDialogOpen(true)}
+                                    >
+                                        Add Category
+                                    </Button>
+                                
 
                                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                                         <FormControl sx={{ width: "350px" }} size="small">
@@ -572,15 +636,57 @@ const EvaluationCRUD = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TableContainer
+            component={Paper}
+            sx={{ border: `2px solid ${borderColor}`, marginTop: "2rem" }}
+            >
+            <Table>
+                <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2" }}>
+                <TableRow>
+                    <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center" }}>#</TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center" }}>Title</TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center" }}>Description</TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center" }}>Action</TableCell>
+                </TableRow>
+                </TableHead>
+                <TableBody>
+                {categories.length > 0 ? (
+                    categories.map((cat, index) => (
+                    <TableRow key={cat.id}>
+                        <TableCell sx={{ textAlign: "center" }}>{index + 1}</TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>{cat.title}</TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>{cat.description}</TableCell>
+                        <TableCell sx={{ textAlign: "center" }}>
+                        <Button
+                            variant="contained"
+                            sx={{ backgroundColor: "#4CAF50", color: "white" }}
+                            onClick={() => handleEditCategory(cat)}
+                        >
+                            Edit
+                        </Button>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                    <TableCell colSpan={4} align="center">
+                        No categories found
+                    </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
+            </TableContainer>
             <TableContainer component={Paper} sx={{ border: `2px solid ${borderColor}`, marginTop: "2rem" }}>
                 <Table>
                     <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2" }}>
                         <TableRow>
-                            <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", border: `2px solid ${borderColor}` }} colSpan={7}>QUESTIONS</TableCell>
+                            <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", border: `2px solid ${borderColor}` }} colSpan={8}>QUESTIONS</TableCell>
                             <TableCell sx={{ color: "white", fontWeight: "bold", textAlign: "center", border: `2px solid ${borderColor}` }} rowSpan={2} colSpan={2}>Action</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell sx={{ color: "white", width: "1rem", textAlign: "center", border: `2px solid ${borderColor}` }}>#</TableCell>
+                            <TableCell sx={{ color: "white", width: "1rem", textAlign: "center", border: `2px solid ${borderColor}` }}>Category</TableCell>
                             <TableCell sx={{ color: "white", width: "40rem", textAlign: "center", border: `2px solid ${borderColor}` }}>Description</TableCell>
                             <TableCell sx={{ color: "white", width: "9rem", textAlign: "center", border: `2px solid ${borderColor}` }}>Choice 1</TableCell>
                             <TableCell sx={{ color: "white", width: "9rem", textAlign: "center", border: `2px solid ${borderColor}` }}>Choice 2</TableCell>
@@ -594,6 +700,7 @@ const EvaluationCRUD = () => {
                             filteredQuestion.map((q, index) => (
                                 <TableRow key={q.question_id}>
                                     <TableCell style={{ textAlign: "center", border: `2px solid ${borderColor}` }}>{index + 1}</TableCell>
+                                    <TableCell style={{ textAlign: "center", border: `2px solid ${borderColor}` }}>{q.category}</TableCell>
                                     <TableCell style={{ padding: "0px 20px", border: `2px solid ${borderColor}` }}>{q.question_description}</TableCell>
                                     <TableCell style={{ textAlign: "center", border: `2px solid ${borderColor}` }}>{q.first_choice}</TableCell>
                                     <TableCell style={{ textAlign: "center", border: `2px solid ${borderColor}` }}>{q.second_choice}</TableCell>
@@ -621,6 +728,21 @@ const EvaluationCRUD = () => {
 
                 <DialogContent sx={{ mt: 2 }}>
                     <Stack spacing={2}>
+                        <FormControl fullWidth>
+                            <InputLabel>Select Category</InputLabel>
+                            <Select
+                                name="category"
+                                value={formData.category}
+                                label="Select Category"
+                                onChange={handleChange}
+                            >
+                                {categories.map((cat) => (
+                                    <MenuItem key={cat.id} value={cat.id}>
+                                        {cat.title}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                         <TextField
                             label="Question Description"
                             name="question"
@@ -648,6 +770,40 @@ const EvaluationCRUD = () => {
                         }}
                     >
                         {editMode ? "Save Changes" : "Insert Question"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={categoryDialogOpen} onClose={handleCategoryDialogClose} fullWidth maxWidth="sm">S
+                <DialogTitle sx={{ color: "maroon", fontWeight: "bold" }}>
+                    {categoryEditMode ? "Edit Category" : "Add New Category"}
+                </DialogTitle>
+                <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+                <DialogContent sx={{ mt: 2 }}>
+                    <Stack spacing={2}>
+                    <TextField
+                        label="Title"
+                        name="title"
+                        value={categoryFormData.title}
+                        onChange={handleCategoryChange}
+                        fullWidth
+                    />
+                    <TextField
+                        label="Description"
+                        name="description"
+                        value={categoryFormData.description}
+                        onChange={handleCategoryChange}
+                        fullWidth
+                    />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCategoryDialogClose}>Cancel</Button>
+                    <Button
+                    variant="contained"
+                    onClick={handleSaveCategory}
+                    sx={{ backgroundColor: "#800000", "&:hover": { backgroundColor: "#6D2323" }, fontWeight: "bold" }}
+                    >
+                    {categoryEditMode ? "Save Changes" : "Insert Category"}
                     </Button>
                 </DialogActions>
             </Dialog>

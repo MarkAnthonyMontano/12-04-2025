@@ -88,9 +88,6 @@ const ApplicantScoring = () => {
     const secondLine = words.slice(middle).join(" ");
 
     const location = useLocation();
-    const queryParams = new URLSearchParams(location.search);
-    const queryPersonId = (queryParams.get("person_id") || "").trim();
-
 
     const handleRowClick = (person_id) => {
         if (!person_id) return;
@@ -104,14 +101,11 @@ const ApplicantScoring = () => {
 
     const tabs = [
 
-        { label: "Room Registration", to: "/room_registration", icon: <KeyIcon fontSize="large" /> },
-        { label: "Entrance Exam Room Assignment", to: "/assign_entrance_exam", icon: <MeetingRoomIcon fontSize="large" /> },
-        { label: "Entrance Exam Schedule Management", to: "/assign_schedule_applicant", icon: <ScheduleIcon fontSize="large" /> },
-        { label: "Proctor's Applicant List", to: "/proctor_applicant_list", icon: <PeopleIcon fontSize="large" /> },
-        { label: "Entrance Examination Scores", to: "/applicant_scoring", icon: <FactCheckIcon fontSize="large" /> },
-        { label: "Announcement", to: "/announcement_for_admission", icon: <CampaignIcon fontSize="large" /> },
-
-
+        { label: "Admission Process for Registrar", to: "/applicant_list_admin", icon: <SchoolIcon fontSize="large" /> },
+        { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
+        { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
+        { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
 
 
     ];
@@ -173,6 +167,36 @@ const ApplicantScoring = () => {
     const [clickedSteps, setClickedSteps] = useState(Array(tabs.length).fill(false));
 
 
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const personIdFromUrl = queryParams.get("person_id");
+
+        if (!personIdFromUrl) return;
+
+        // fetch info of that person
+        axios
+            .get(`http://localhost:5000/api/person_with_applicant/${personIdFromUrl}`)
+            .then((res) => {
+                if (res.data?.applicant_number) {
+
+                    // AUTO-INSERT applicant_number into search bar
+                    setSearchQuery(res.data.applicant_number);
+
+                    // If you have a fetchUploads() or fetchExamScore() — call it
+                    if (typeof fetchUploadsByApplicantNumber === "function") {
+                        fetchUploadsByApplicantNumber(res.data.applicant_number);
+                    }
+
+                    if (typeof fetchApplicants === "function") {
+                        fetchApplicants();
+                    }
+                }
+            })
+            .catch((err) => console.error("Auto search failed:", err));
+    }, [location.search]);
+
+
     useEffect(() => {
         if (location.search.includes("person_id")) {
             navigate("/applicant_scoring", { replace: true });  // ⬅️ removes ?person_id
@@ -181,12 +205,12 @@ const ApplicantScoring = () => {
 
     const handleStepClick = (index, to) => {
         setActiveStep(index);
-        const pid = sessionStorage.getItem("admin_edit_person_id");
 
-        if (pid && to !== "/qualifying_exam_scores") {
-            navigate(`${to}?person_id=${pid}`);   // adds ?person_id
+        const pid = sessionStorage.getItem("admin_edit_person_id");
+        if (pid) {
+            navigate(`${to}?person_id=${pid}`);
         } else {
-            navigate(to);                         // keeps /applicant_list clean
+            navigate(to);
         }
     };
 
@@ -200,6 +224,83 @@ const ApplicantScoring = () => {
     const [userID, setUserID] = useState("");
     const [user, setUser] = useState("");
     const [userRole, setUserRole] = useState("");
+
+    const queryParams = new URLSearchParams(location.search);
+    const queryPersonId = queryParams.get("person_id")?.trim() || "";
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem("email");
+        const storedRole = localStorage.getItem("role");
+        const loggedInPersonId = localStorage.getItem("person_id");
+
+        if (!storedUser || !storedRole || !loggedInPersonId) {
+            window.location.href = "/login";
+            return;
+        }
+
+        setUser(storedUser);
+        setUserRole(storedRole);
+
+        const allowedRoles = ["registrar", "applicant", "superadmin"];
+        if (!allowedRoles.includes(storedRole)) {
+            window.location.href = "/login";
+            return;
+        }
+
+        const lastSelected = sessionStorage.getItem("admin_edit_person_id");
+
+        // ⭐ CASE 1: URL HAS ?person_id=
+        if (queryPersonId !== "") {
+            sessionStorage.setItem("admin_edit_person_id", queryPersonId);
+            setUserID(queryPersonId);
+            return;
+        }
+
+
+
+        // ⭐ CASE 3: No URL ID and no last selected → start blank
+        setUserID("");
+    }, [queryPersonId]);
+
+
+
+
+    useEffect(() => {
+        let consumedFlag = false;
+
+        const tryLoad = async () => {
+            if (queryPersonId) {
+                await fetchByPersonId(queryPersonId);
+                setExplicitSelection(true);
+                consumedFlag = true;
+                return;
+            }
+
+            // fallback only if it's a fresh selection from Applicant List
+            const source = sessionStorage.getItem("admin_edit_person_id_source");
+            const tsStr = sessionStorage.getItem("admin_edit_person_id_ts");
+            const id = sessionStorage.getItem("admin_edit_person_id");
+            const ts = tsStr ? parseInt(tsStr, 10) : 0;
+            const isFresh = source === "applicant_list" && Date.now() - ts < 5 * 60 * 1000;
+
+            if (id && isFresh) {
+                await fetchByPersonId(id);
+                setExplicitSelection(true);
+                consumedFlag = true;
+            }
+        };
+
+        tryLoad().finally(() => {
+            // consume the freshness so it won't auto-load again later
+            if (consumedFlag) {
+                sessionStorage.removeItem("admin_edit_person_id_source");
+                sessionStorage.removeItem("admin_edit_person_id_ts");
+            }
+        });
+    }, [queryPersonId]);
+
+
+
 
 
     useEffect(() => {
@@ -273,8 +374,38 @@ const ApplicantScoring = () => {
         fetchApplicants();
     }, []);
 
+    useEffect(() => {
+        const delayDebounce = setTimeout(async () => {
+            if (searchQuery.trim() === "") return; // Don't search empty
+
+            try {
+                const res = await axios.get(`${API_BASE_URL}/api/search-person`, {
+                    params: { query: searchQuery }
+                });
+
+                if (res.data && res.data.person_id) {
+                    const details = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${res.data.person_id}`);
+                    setPerson(details.data);
+
+                    sessionStorage.setItem("admin_edit_person_id", details.data.person_id);
+                    setUserID(details.data.person_id);
+                    setSearchError("");
+                } else {
+                    console.error("No valid person ID found in search result");
+                    setSearchError("Invalid search result");
+                }
+            } catch (err) {
+                console.error("Search failed:", err);
+                setSearchError("Applicant not found");
+            }
+        }, 500); // debounce
+
+        return () => clearTimeout(delayDebounce);
+    }, [searchQuery]);
+
 
     const [curriculumOptions, setCurriculumOptions] = useState([]);
+
 
     useEffect(() => {
         const fetchCurriculums = async () => {
@@ -533,7 +664,6 @@ const ApplicantScoring = () => {
             abstract: person.abstract,
             final_rating: person.final_rating,
             status: newStatus,
-            user_person_id: localStorage.getItem("person_id"),
         };
 
         // 🔥 Update applicants instantly (single source of truth)
@@ -776,17 +906,8 @@ th, td {
 
             if (res.data.success) {
                 setSnack({ open: true, message: "Excel imported successfully!", severity: "success" });
+                fetchApplicants(); // ✅ refresh scores
                 setSelectedFile(null); // reset file input
-
-                // ✅ Refresh applicants and update editScores with imported status
-                const fetched = await fetchApplicants(); // make sure fetchApplicants returns the fetched array
-                const newEditScores = {};
-                fetched.forEach(person => {
-                    if (person.status) {
-                        newEditScores[person.person_id] = { status: person.status };
-                    }
-                });
-                setEditScores(prev => ({ ...prev, ...newEditScores }));
             } else {
                 setSnack({ open: true, message: res.data.error || "Failed to import", severity: "error" });
             }
@@ -795,7 +916,6 @@ th, td {
             setSnack({ open: true, message: "Import failed: " + (err.response?.data?.error || err.message), severity: "error" });
         }
     };
-
 
     const [editScores, setEditScores] = useState({});
 
@@ -838,29 +958,6 @@ th, td {
         }
     };
 
-    // run on mount + when online again (to sync pending scores)
-    useEffect(() => {
-        const syncPendingScores = async () => {
-            const pending = JSON.parse(localStorage.getItem("pendingScores") || "[]");
-            if (pending.length === 0) return;
-
-            const stillPending = [];
-            for (const p of pending) {
-                try {
-                    await axios.post(`${API_BASE_URL}/exam/save`, p);
-                    console.log("✅ Synced pending:", p);
-                } catch (err) {
-                    stillPending.push(p);
-                }
-            }
-            localStorage.setItem("pendingScores", JSON.stringify(stillPending));
-        };
-
-        syncPendingScores();
-        window.addEventListener("online", syncPendingScores);
-        return () => window.removeEventListener("online", syncPendingScores);
-    }, []);
-
     const handleScoreChange = (person, field, value) => {
         const updatedScores = {
             ...person,
@@ -883,7 +980,6 @@ th, td {
             abstract: updatedScores.abstract,
             final_rating,
             status: person.status ?? "",
-            user_person_id: localStorage.getItem("person_id"),
         };
 
         // 🔥 UPDATE UI INSTANTLY
@@ -926,7 +1022,6 @@ th, td {
                     Number(updated.math || 0) +
                     Number(updated.abstract || 0)) / 5,
             status: person.status ?? "",
-            user_person_id: localStorage.getItem("person_id"),
         };
 
         await autoSaveScore(payload);

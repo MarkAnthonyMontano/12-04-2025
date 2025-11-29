@@ -269,7 +269,8 @@ const RegisterRegistrar = () => {
 
         for (const r of registrars) {
             try {
-                const res = await axios.get(`${API_BASE_URL}/api/${r.employee_id}`);
+                const res = await axios.get(`${API_BASE_URL}/api/page_access/${r.employee_id}`);
+
 
                 if (res.data.success) {
                     const role = determineRoleFromPageAccess(

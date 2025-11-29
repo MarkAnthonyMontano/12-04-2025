@@ -78,19 +78,20 @@ const AnnouncementPanel = () => {
     }, []);
 
     const tabs = [
-    { label: "Room Registration", to: "/room_registration", icon: <KeyIcon fontSize="large" /> },
-       { label: "Entrance Exam Room Assignment", to: "/assign_entrance_exam", icon: <MeetingRoomIcon fontSize="large" /> },
-       { label: "Entrance Exam Schedule Management", to: "/assign_schedule_applicant", icon: <ScheduleIcon fontSize="large" /> },
-       { label: "Proctor's Applicant List", to: "/proctor_applicant_list", icon: <PeopleIcon fontSize="large" /> },
-       { label: "Entrance Examination Scores", to: "/applicant_scoring", icon: <FactCheckIcon fontSize="large" /> },
-       { label: "Announcement", to: "/announcement_for_admission", icon: <CampaignIcon fontSize="large" /> },
-   
-   
+
+        { label: "Room Registration", to: "/room_registration", icon: <KeyIcon fontSize="large" /> },
+        { label: "Entrance Exam Room Assignment", to: "/assign_entrance_exam", icon: <MeetingRoomIcon fontSize="large" /> },
+        { label: "Entrance Exam Schedule Management", to: "/assign_schedule_applicant", icon: <ScheduleIcon fontSize="large" /> },
+        { label: "Proctor's Applicant List", to: "/proctor_applicant_list", icon: <PeopleIcon fontSize="large" /> },
+        { label: "Announcement", to: "/announcement_for_admission", icon: <CampaignIcon fontSize="large" /> },
+
+
+
 
     ];
 
     const navigate = useNavigate();
-    const [activeStep, setActiveStep] = useState(5);
+    const [activeStep, setActiveStep] = useState(4);
     const [clickedSteps, setClickedSteps] = useState(Array(tabs.length).fill(false));
 
 
@@ -138,40 +139,40 @@ const AnnouncementPanel = () => {
     };
 
 
-const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-        const formData = new FormData();
-        formData.append("title", form.title);
-        formData.append("content", form.content);
-        formData.append("valid_days", form.valid_days);
-        formData.append("target_role", form.target_role);
-        formData.append("creator_role", userRole);
-        formData.append("creator_id", employeeID);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const formData = new FormData();
+            formData.append("title", form.title);
+            formData.append("content", form.content);
+            formData.append("valid_days", form.valid_days);
+            formData.append("target_role", form.target_role);
+            formData.append("creator_role", userRole);
+            formData.append("creator_id", employeeID);
 
-        if (image) formData.append("image", image);
+            if (image) formData.append("image", image);
 
-        if (editingId) {
-            await axios.put(`${API_BASE_URL}/api/announcements/${editingId}`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-            setSnackbar({ open: true, message: "Announcement updated!", severity: "success" });
-        } else {
-            await axios.post(`${API_BASE_URL}/api/announcements`, formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-            setSnackbar({ open: true, message: "Announcement created!", severity: "success" });
+            if (editingId) {
+                await axios.put(`${API_BASE_URL}/api/announcements/${editingId}`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                setSnackbar({ open: true, message: "Announcement updated!", severity: "success" });
+            } else {
+                await axios.post(`${API_BASE_URL}/api/announcements`, formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                setSnackbar({ open: true, message: "Announcement created!", severity: "success" });
+            }
+
+            setForm({ title: "", content: "", valid_days: "7", target_role: "" });
+            setEditingId(null);
+            setImage(null);
+            fetchAnnouncements();
+        } catch (err) {
+            console.error(err);
+            setSnackbar({ open: true, message: "Error saving announcement!", severity: "error" });
         }
-
-        setForm({ title: "", content: "", valid_days: "7", target_role: "" });
-        setEditingId(null);
-        setImage(null);
-        fetchAnnouncements();
-    } catch (err) {
-        console.error(err);
-        setSnackbar({ open: true, message: "Error saving announcement!", severity: "error" });
-    }
-};
+    };
 
 
     const handleEdit = (announcement) => {

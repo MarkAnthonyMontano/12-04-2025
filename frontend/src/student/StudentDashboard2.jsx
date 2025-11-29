@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { SettingsContext } from "../App";
 
 import axios from "axios";
-import { Button, Box, TextField, Container, Card, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Typography, FormControl, FormHelperText, InputLabel, Select, MenuItem, Checkbox, FormControlLabel } from "@mui/material";
+import { Button, Box, TextField, Container, Card, Modal, TableContainer, Paper, Table, TableHead, TableRow, TableCell, Typography, FormControl, FormHelperText, InputLabel, Select, MenuItem, Checkbox, FormControlLabel } from "@mui/material";
 import { Link } from "react-router-dom";
 import PersonIcon from "@mui/icons-material/Person";
 import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
@@ -189,27 +189,6 @@ const StudentDashboard2 = () => {
         fetchPersonById();
     }, [userID]);
 
-    const steps = [
-        { label: "Personal Information", icon: <PersonIcon />, path: `/student_dashboard1` },
-        { label: "Family Background", icon: <FamilyRestroomIcon />, path: `/student_dashboard2` },
-        { label: "Educational Attainment", icon: <SchoolIcon />, path: `/student_dashboard3` },
-        { label: "Health Medical Records", icon: <HealthAndSafetyIcon />, path: `/student_dashboard4` },
-        { label: "Other Information", icon: <InfoIcon />, path: `/student_dashboard5` },
-    ];
-
-
-    const [activeStep, setActiveStep] = useState(1);
-    const [clickedSteps, setClickedSteps] = useState(Array(steps.length).fill(false));
-    const [currentStep, setCurrentStep] = useState(0);
-
-    const handleStepClick = (index, to) => {
-        setActiveStep(index);
-        navigate(to);
-    };
-
-
-
-
 
     const handleUpdate = async (updatedData) => {
         try {
@@ -250,23 +229,69 @@ const StudentDashboard2 = () => {
     };
 
 
-    const autoSave = async () => {
-        try {
-            const personIdToUpdate = selectedPerson?.person_id || userID;
+    // Real-time save on every character typed
+    const handleChange = (e) => {
+        const { name, type, checked, value } = e.target;
 
-            const { person_id, created_at, current_step, ...cleanPayload } = person;
+        const updatedPerson = {
+            ...person,
+            [name]: type === "checkbox" ? (checked ? 1 : 0) : value,
+        };
 
-            await axios.put(
-                `${API_BASE_URL}/api/student/update_person/${personIdToUpdate}`,
-                cleanPayload
-            );
+        // If updating either mother_income or father_income, calculate total and set annual_income
+        if (name === "mother_income" || name === "father_income") {
+            const motherIncome = parseFloat(name === "mother_income" ? value : updatedPerson.mother_income) || 0;
+            const fatherIncome = parseFloat(name === "father_income" ? value : updatedPerson.father_income) || 0;
+            const totalIncome = motherIncome + fatherIncome;
 
+            let annualIncomeBracket = "";
+            if (totalIncome <= 80000) {
+                annualIncomeBracket = "80,000 and below";
+            } else if (totalIncome <= 135000) {
+                annualIncomeBracket = "80,000 to 135,000";
+            } else if (totalIncome <= 250000) {
+                annualIncomeBracket = "135,000 to 250,000";
+            } else if (totalIncome <= 500000) {
+                annualIncomeBracket = "250,000 to 500,000";
+            } else if (totalIncome <= 1000000) {
+                annualIncomeBracket = "500,000 to 1,000,000";
+            } else {
+                annualIncomeBracket = "1,000,000 and above";
+            }
 
-            console.log("Auto-saved.");
-        } catch (err) {
-            console.error("Auto-save failed.");
+            updatedPerson.annual_income = annualIncomeBracket;
         }
+
+        setPerson(updatedPerson);
+        handleUpdate(updatedPerson); // No delay, real-time save
     };
+
+
+
+
+
+    const steps = [
+        { label: "Personal Information", icon: <PersonIcon />, path: `/student_dashboard1` },
+        { label: "Family Background", icon: <FamilyRestroomIcon />, path: `/student_dashboard2` },
+        { label: "Educational Attainment", icon: <SchoolIcon />, path: `/student_dashboard3` },
+        { label: "Health Medical Records", icon: <HealthAndSafetyIcon />, path: `/student_dashboard4` },
+        { label: "Other Information", icon: <InfoIcon />, path: `/student_dashboard5` },
+    ];
+
+
+    const [activeStep, setActiveStep] = useState(1);
+    const [clickedSteps, setClickedSteps] = useState(Array(steps.length).fill(false));
+    const [currentStep, setCurrentStep] = useState(0);
+
+    const handleStepClick = (index, to) => {
+        setActiveStep(index);
+        navigate(to);
+    };
+
+
+
+
+
 
 
     const [persons, setPersons] = useState([]);
@@ -395,9 +420,12 @@ const StudentDashboard2 = () => {
     ];
 
 
+
     // dot not alter
     return (
         <Box sx={{ height: "calc(100vh - 140px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent" }}>
+
+            {/* Top header: DOCUMENTS SUBMITTED + Search */}
             <Box
                 sx={{
                     display: 'flex',
@@ -417,18 +445,18 @@ const StudentDashboard2 = () => {
                         fontSize: '36px',
                     }}
                 >
-                    FAMILY BACKGROUND
+                    STUDENT - FAMILY BACKGROUND
                 </Typography>
 
 
-
-
             </Box>
-            <hr style={{ border: "1px solid #ccc", width: "100%" }} />
 
+            <hr style={{ border: "1px solid #ccc", width: "100%" }} />
             <br />
 
 
+
+     
             <Box
                 sx={{
                     display: "flex",
@@ -501,9 +529,7 @@ const StudentDashboard2 = () => {
 
 
 
-
             {/* Cards Section */}
-
             <Box
                 sx={{
                     display: "flex",
@@ -527,6 +553,8 @@ const StudentDashboard2 = () => {
                                 minHeight: 60,
                                 borderRadius: 2,
                                 border: `2px solid ${borderColor}`,
+
+
                                 backgroundColor: "#fff",
                                 display: "flex",
                                 flexDirection: "row",
@@ -578,7 +606,6 @@ const StudentDashboard2 = () => {
                     </motion.div>
                 ))}
             </Box>
-
 
 
 
@@ -674,6 +701,7 @@ const StudentDashboard2 = () => {
                         </React.Fragment>
                     ))}
                 </Box>
+
                 <br />
 
                 <form>
@@ -696,7 +724,7 @@ const StudentDashboard2 = () => {
                     </Container>
 
 
-                    <Container maxWidth="100%" sx={{ backgroundColor: "#f1f1f1", border: "2px solid black", padding: 4, borderRadius: 2, boxShadow: 3 }}>
+                    <Container maxWidth="100%" sx={{ backgroundColor: "#f1f1f1", border: `2px solid ${borderColor}`, padding: 4, borderRadius: 2, boxShadow: 3 }}>
                         <Typography style={{ fontSize: "20px", color: "#6D2323", fontWeight: "bold" }}>Family Background:</Typography>
                         <hr style={{ border: "1px solid #ccc", width: "100%" }} />
                         <br />
@@ -710,8 +738,6 @@ const StudentDashboard2 = () => {
                                 <Checkbox
                                     name="solo_parent"
                                     checked={person.solo_parent === 1}
-                                    disabled
-
                                     onChange={(e) => {
                                         const checked = e.target.checked;
 
@@ -725,7 +751,7 @@ const StudentDashboard2 = () => {
                                         setPerson(newPerson);
                                         handleUpdate(newPerson); // Save immediately
                                     }}
-
+                                    onBlur={handleBlur}
                                     sx={{ width: 25, height: 25 }}
                                 />
                                 <label style={{ fontFamily: "Arial" }}>Solo Parent</label>
@@ -737,7 +763,6 @@ const StudentDashboard2 = () => {
                                     <InputLabel id="parent-select-label">- Parent- </InputLabel>
                                     <Select
                                         labelId="parent-select-label"
-                                        disabled
                                         value={soloParentChoice}
                                         onChange={(e) => {
                                             const choice = e.target.value;
@@ -776,15 +801,13 @@ const StudentDashboard2 = () => {
                             <FormControlLabel
                                 control={
                                     <Checkbox
-                                        disabled
                                         name="father_deceased"
-                                        value={person.father_deceased} // 👈 Added value
                                         checked={person.father_deceased === 1}
                                         onChange={(e) => {
                                             const checked = e.target.checked;
 
                                             // Call your form handler
-
+                                            handleChange(e);
 
                                             // Update local state
                                             setPerson((prev) => ({
@@ -792,12 +815,13 @@ const StudentDashboard2 = () => {
                                                 father_deceased: checked ? 1 : 0,
                                             }));
                                         }}
-
+                                        onBlur={handleBlur}
                                     />
                                 }
-                                label="Father Deceased"
+                                label="Father Seperated / Deceased"
                             />
                             <br />
+
 
                             {/* Show Father's Info ONLY if not deceased */}
                             {!isFatherDeceased && (
@@ -806,15 +830,14 @@ const StudentDashboard2 = () => {
                                         <Box sx={{ flex: 1 }}>
                                             <Typography variant="subtitle2" mb={1}>Father Family Name</Typography>
                                             <TextField
-                                                readOnly
                                                 fullWidth
                                                 size="small"
                                                 required
-
                                                 placeholder="Enter Father Last Name"
                                                 name="father_family_name"
-                                                value={person.father_family_name}
-
+                                                value={person.father_family_name ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_family_name} helperText={errors.father_family_name ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -825,11 +848,10 @@ const StudentDashboard2 = () => {
                                                 size="small"
                                                 required
                                                 name="father_given_name"
-                                                readOnly
-
                                                 placeholder="Enter Father First Name"
-                                                value={person.father_given_name}
-
+                                                value={person.father_given_name ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_given_name} helperText={errors.father_given_name ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -839,11 +861,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="father_middle_name"
                                                 placeholder="Enter Father Middle Name"
-                                                value={person.father_middle_name}
-
+                                                value={person.father_middle_name ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_middle_name} helperText={errors.father_middle_name ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -854,11 +876,11 @@ const StudentDashboard2 = () => {
                                                 <Select
                                                     labelId="father-ext-label"
                                                     id="father_ext"
-                                                    readOnly
                                                     name="father_ext"
                                                     value={person.father_ext || ""}
                                                     label="Extension"
-
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                 >
                                                     <MenuItem value=""><em>Select Extension</em></MenuItem>
                                                     <MenuItem value="Jr.">Jr.</MenuItem>
@@ -881,11 +903,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="father_nickname"
                                                 placeholder="Enter Father Nickname"
-                                                value={person.father_nickname}
-
+                                                value={person.father_nickname ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_nickname} helperText={errors.father_nickname ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -900,7 +922,6 @@ const StudentDashboard2 = () => {
                                         {/* Father's Education Not Applicable Checkbox */}
                                         <Checkbox
                                             name="father_education"
-                                            disabled
                                             checked={person.father_education === 1}
                                             onChange={(e) => {
                                                 const isChecked = e.target.checked;
@@ -922,7 +943,7 @@ const StudentDashboard2 = () => {
                                                 setPerson(updatedPerson);
                                                 handleUpdate(updatedPerson); // Immediate update (optional)
                                             }}
-
+                                            onBlur={handleBlur}
                                             sx={{ width: 25, height: 25 }}
                                         />
                                         <label style={{ fontFamily: "Arial" }}>Father's education not applicable</label>
@@ -939,11 +960,11 @@ const StudentDashboard2 = () => {
                                                 <TextField
                                                     fullWidth
                                                     size="small"
-                                                    readOnly
                                                     placeholder="Enter Father Education Level"
                                                     name="father_education_level"
-                                                    value={person.father_education_level}
-
+                                                    value={person.father_education_level ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.father_education_level}
                                                     helperText={errors.father_education_level ? "This field is required." : ""}
                                                 />
@@ -955,11 +976,10 @@ const StudentDashboard2 = () => {
                                                     fullWidth
                                                     size="small"
                                                     name="father_last_school"
-                                                    readOnly
-
                                                     placeholder="Enter Father Last School"
-                                                    value={person.father_last_school}
-
+                                                    value={person.father_last_school ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.father_last_school}
                                                     helperText={errors.father_last_school ? "This field is required." : ""}
                                                 />
@@ -971,10 +991,10 @@ const StudentDashboard2 = () => {
                                                     fullWidth
                                                     size="small"
                                                     name="father_course"
-                                                    readOnly
                                                     placeholder="Enter Father Course"
-                                                    value={person.father_course}
-
+                                                    value={person.father_course ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.father_course}
                                                     helperText={errors.father_course ? "This field is required." : ""}
                                                 />
@@ -986,11 +1006,10 @@ const StudentDashboard2 = () => {
                                                     fullWidth
                                                     size="small"
                                                     name="father_year_graduated"
-                                                    readOnly
-
                                                     placeholder="Enter Father Year Graduated"
-                                                    value={person.father_year_graduated}
-
+                                                    value={person.father_year_graduated ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.father_year_graduated}
                                                     helperText={errors.father_year_graduated ? "This field is required." : ""}
                                                 />
@@ -1001,11 +1020,11 @@ const StudentDashboard2 = () => {
                                                 <TextField
                                                     fullWidth
                                                     size="small"
-                                                    readOnly
                                                     name="father_school_address"
                                                     placeholder="Enter Father School Address"
-                                                    value={person.father_school_address}
-
+                                                    value={person.father_school_address ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.father_school_address}
                                                     helperText={errors.father_school_address ? "This field is required." : ""}
                                                 />
@@ -1027,11 +1046,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="father_contact"
                                                 placeholder="Enter Father Contact"
-                                                value={person.father_contact}
-
+                                                value={person.father_contact ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_contact} helperText={errors.father_contact ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -1041,12 +1060,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
-
                                                 name="father_occupation"
-                                                value={person.father_occupation}
+                                                value={person.father_occupation ?? ""}
                                                 placeholder="Enter Father Occupation"
-
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_occupation} helperText={errors.father_occupation ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -1056,11 +1074,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="father_employer"
                                                 placeholder="Enter Father Employer"
-                                                value={person.father_employer}
-
+                                                value={person.father_employer ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_employer} helperText={errors.father_employer ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -1072,11 +1090,10 @@ const StudentDashboard2 = () => {
                                                 size="small"
                                                 required
                                                 name="father_income"
-                                                readOnly
-
                                                 placeholder="Enter Father Income"
-                                                value={person.father_income}
-
+                                                value={person.father_income ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.father_income}
                                                 helperText={errors.father_income ? "This field is required." : ""}
                                             />
@@ -1089,11 +1106,11 @@ const StudentDashboard2 = () => {
                                             fullWidth
                                             size="small"
                                             required
-                                            readOnly
                                             name="father_email"
                                             placeholder="Enter your Father Email Address (e.g., username@gmail.com)"
-                                            value={person.father_email}
-
+                                            value={person.father_email ?? ""}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
 
                                         />
                                     </Box>
@@ -1112,12 +1129,12 @@ const StudentDashboard2 = () => {
                                 control={
                                     <Checkbox
                                         name="mother_deceased"
-                                        disabled
-                                        value={person.mother_deceased} // 👈 Added value
                                         checked={person.mother_deceased === 1}
                                         onChange={(e) => {
                                             const checked = e.target.checked;
 
+                                            // Call your form handler
+                                            handleChange(e);
 
                                             // Update local state
                                             setPerson((prev) => ({
@@ -1125,12 +1142,13 @@ const StudentDashboard2 = () => {
                                                 mother_deceased: checked ? 1 : 0,
                                             }));
                                         }}
-
+                                        onBlur={handleBlur}
                                     />
                                 }
-                                label="Mother Deceased"
+                                label="Mother Seperated / Deceased"
                             />
                             <br />
+
 
                             {/* Show Mother's Info ONLY if not deceased */}
                             {!isMotherDeceased && (
@@ -1142,13 +1160,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-
-                                                readOnly
-
                                                 name="mother_family_name"
                                                 placeholder="Enter your Mother Last Name"
-                                                value={person.mother_family_name}
-
+                                                value={person.mother_family_name ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_family_name}
                                                 helperText={errors.mother_family_name ? "This field is required." : ""}
                                             />
@@ -1160,12 +1176,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
-
                                                 name="mother_given_name"
                                                 placeholder="Enter your Mother First Name"
-                                                value={person.mother_given_name}
-
+                                                value={person.mother_given_name ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_given_name}
                                                 helperText={errors.mother_given_name ? "This field is required." : ""}
                                             />
@@ -1177,11 +1192,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="mother_middle_name"
                                                 placeholder="Enter your Mother Middle Name"
-                                                value={person.mother_middle_name}
-
+                                                value={person.mother_middle_name ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_middle_name}
                                                 helperText={errors.mother_middle_name ? "This field is required." : ""}
                                             />
@@ -1196,10 +1211,10 @@ const StudentDashboard2 = () => {
                                                     labelId="mother-ext-label"
                                                     id="mother_ext"
                                                     name="mother_ext"
-                                                    readOnly
                                                     value={person.mother_ext || ""}
                                                     label="Extension"
-
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                 >
                                                     <MenuItem value=""><em>Select Extension</em></MenuItem>
                                                     <MenuItem value="Jr.">Jr.</MenuItem>
@@ -1221,12 +1236,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
-
                                                 name="mother_nickname"
                                                 placeholder="Enter your Mother Nickname"
-                                                value={person.mother_nickname}
-
+                                                value={person.mother_nickname ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_nickname}
                                                 helperText={errors.mother_nickname ? "This field is required." : ""}
                                             />
@@ -1244,7 +1258,6 @@ const StudentDashboard2 = () => {
                                         {/* Mother's Education Not Applicable Checkbox */}
                                         <Checkbox
                                             name="mother_education"
-                                            disabled
                                             checked={person.mother_education === 1}
                                             onChange={(e) => {
                                                 const isChecked = e.target.checked;
@@ -1266,7 +1279,7 @@ const StudentDashboard2 = () => {
                                                 setPerson(updatedPerson);
                                                 handleUpdate(updatedPerson); // Optional: Immediate save
                                             }}
-
+                                            onBlur={handleBlur}
                                             sx={{ width: 25, height: 25 }}
                                         />
                                         <label style={{ fontFamily: "Arial" }}>Mother's education not applicable</label>
@@ -1280,11 +1293,11 @@ const StudentDashboard2 = () => {
                                                 <TextField
                                                     fullWidth
                                                     size="small"
-                                                    readOnly
                                                     name="mother_education_level"
                                                     placeholder="Enter your Mother Education Level"
-                                                    value={person.mother_education_level}
-
+                                                    value={person.mother_education_level ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.mother_education_level}
                                                     helperText={errors.mother_education_level ? "This field is required." : ""}
                                                 />
@@ -1296,10 +1309,10 @@ const StudentDashboard2 = () => {
                                                     fullWidth
                                                     size="small"
                                                     name="mother_last_school"
-                                                    readOnly
                                                     placeholder="Enter your Mother Last School Attended"
-                                                    value={person.mother_last_school}
-
+                                                    value={person.mother_last_school ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.mother_last_school}
                                                     helperText={errors.mother_last_school ? "This field is required." : ""}
                                                 />
@@ -1311,10 +1324,10 @@ const StudentDashboard2 = () => {
                                                     fullWidth
                                                     size="small"
                                                     name="mother_course"
-                                                    readOnly
                                                     placeholder="Enter your Mother Course"
-                                                    value={person.mother_course}
-
+                                                    value={person.mother_course ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.mother_course}
                                                     helperText={errors.mother_course ? "This field is required." : ""}
                                                 />
@@ -1326,10 +1339,10 @@ const StudentDashboard2 = () => {
                                                     fullWidth
                                                     size="small"
                                                     name="mother_year_graduated"
-                                                    readOnly
                                                     placeholder="Enter your Mother Year Graduated"
-                                                    value={person.mother_year_graduated}
-
+                                                    value={person.mother_year_graduated ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.mother_year_graduated}
                                                     helperText={errors.mother_year_graduated ? "This field is required." : ""}
                                                 />
@@ -1341,10 +1354,10 @@ const StudentDashboard2 = () => {
                                                     fullWidth
                                                     size="small"
                                                     name="mother_school_address"
-                                                    readOnly
                                                     placeholder="Enter your Mother School Address"
-                                                    value={person.mother_school_address}
-
+                                                    value={person.mother_school_address ?? ""}
+                                                    onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     error={errors.mother_school_address}
                                                     helperText={errors.mother_school_address ? "This field is required." : ""}
                                                 />
@@ -1364,12 +1377,12 @@ const StudentDashboard2 = () => {
                                             <TextField
                                                 fullWidth
                                                 size="small"
-                                                readOnly
                                                 required
                                                 name="mother_contact"
                                                 placeholder="Enter your Mother Contact"
-                                                value={person.mother_contact}
-
+                                                value={person.mother_contact ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_contact} helperText={errors.mother_contact ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -1379,11 +1392,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="mother_occupation"
                                                 placeholder="Enter your Mother Occupation"
-                                                value={person.mother_occupation}
-
+                                                value={person.mother_occupation ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_occupation} helperText={errors.mother_occupation ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -1393,11 +1406,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="mother_employer"
                                                 placeholder="Enter your Mother Employer"
-                                                value={person.mother_employer}
-
+                                                value={person.mother_employer ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_employer} helperText={errors.mother_employer ? "This field is required." : ""}
                                             />
                                         </Box>
@@ -1409,11 +1422,11 @@ const StudentDashboard2 = () => {
                                                 fullWidth
                                                 size="small"
                                                 required
-                                                readOnly
                                                 name="mother_income"
                                                 placeholder="Enter your Mother Income"
-                                                value={person.mother_income}
-
+                                                value={person.mother_income ?? ""}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
                                                 error={errors.mother_income}
                                                 helperText={errors.mother_income ? "This field is required." : ""}
                                             />
@@ -1426,11 +1439,11 @@ const StudentDashboard2 = () => {
                                             fullWidth
                                             size="small"
                                             required
-                                            readOnly
                                             name="mother_email"
                                             placeholder="Enter your Mother Email Address (e.g., username@gmail.com)"
-                                            value={person.mother_email}
-
+                                            value={person.mother_email ?? ""}
+                                            onChange={handleChange}
+                                            onBlur={handleBlur}
 
                                         />
                                     </Box>
@@ -1450,11 +1463,11 @@ const StudentDashboard2 = () => {
                                 <Select
                                     labelId="guardian-label"
                                     id="guardian"
-                                    readOnly
                                     name="guardian"
                                     value={person.guardian || ""}
                                     label="Guardian"
-
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
                                 >
                                     <MenuItem value=""><em>Select Guardian</em></MenuItem>
                                     <MenuItem value="Father">Father</MenuItem>
@@ -1483,12 +1496,12 @@ const StudentDashboard2 = () => {
                                 <TextField
                                     fullWidth
                                     size="small"
-                                    readOnly
                                     required
                                     name="guardian_family_name"
                                     placeholder="Enter your Guardian Family Name"
-                                    value={person.guardian_family_name}
-
+                                    value={person.guardian_family_name ?? ""}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
                                     error={!!errors.guardian_family_name}
                                     helperText={errors.guardian_family_name ? "This field is required." : ""}
                                 />
@@ -1501,12 +1514,11 @@ const StudentDashboard2 = () => {
                                     fullWidth
                                     size="small"
                                     required
-                                    readOnly
-
                                     name="guardian_given_name"
                                     placeholder="Enter your Guardian First Name"
-                                    value={person.guardian_given_name}
-
+                                    value={person.guardian_given_name ?? ""}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
                                     error={!!errors.guardian_given_name}
                                     helperText={errors.guardian_given_name ? "This field is required." : ""}
                                 />
@@ -1519,11 +1531,11 @@ const StudentDashboard2 = () => {
                                     fullWidth
                                     size="small"
                                     required
-                                    readOnly
                                     name="guardian_middle_name"
                                     placeholder="Enter your Guardian Middle Name"
-                                    value={person.guardian_middle_name}
-
+                                    value={person.guardian_middle_name ?? ""}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
                                     error={!!errors.guardian_middle_name}
                                     helperText={errors.guardian_middle_name ? "This field is required." : ""}
                                 />
@@ -1538,10 +1550,10 @@ const StudentDashboard2 = () => {
                                         labelId="guardian-ext-label"
                                         id="guardian_ext"
                                         name="guardian_ext"
-                                        readOnly
                                         value={person.guardian_ext || ""}
                                         label="Extension"
-
+                                        onChange={handleChange}
+                                        onBlur={handleBlur}
                                     >
                                         <MenuItem value=""><em>Select Extension</em></MenuItem>
                                         <MenuItem value="Jr.">Jr.</MenuItem>
@@ -1565,12 +1577,11 @@ const StudentDashboard2 = () => {
                                     fullWidth
                                     size="small"
                                     required
-                                    readOnly
-
                                     name="guardian_nickname"
                                     placeholder="Enter your Guardian Nickname"
-                                    value={person.guardian_nickname}
-
+                                    value={person.guardian_nickname ?? ""}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
                                     error={!!errors.guardian_nickname}
                                     helperText={errors.guardian_nickname ? "This field is required." : ""}
                                 />
@@ -1587,11 +1598,11 @@ const StudentDashboard2 = () => {
                                 fullWidth
                                 size="small"
                                 required
-                                readOnly
                                 name="guardian_address"
                                 placeholder="Enter your Guardian Address"
-                                value={person.guardian_address}
-
+                                value={person.guardian_address ?? ""}
+                                onChange={handleChange}
+                                onBlur={handleBlur}
                                 error={errors.guardian_address}
                                 helperText={errors.guardian_address ? "This field is required." : ""}
                             />
@@ -1605,11 +1616,10 @@ const StudentDashboard2 = () => {
                                     size="small"
                                     required
                                     name="guardian_contact"
-                                    readOnly
-
                                     placeholder="Enter your Guardian Contact Number"
-                                    value={person.guardian_contact}
-
+                                    value={person.guardian_contact ?? ""}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
                                     error={errors.guardian_contact} helperText={errors.guardian_contact ? "This field is required." : ""}
                                 />
                             </Box>
@@ -1621,10 +1631,10 @@ const StudentDashboard2 = () => {
                                     size="small"
                                     required
                                     name="guardian_email"
-                                    readOnly
                                     placeholder="Enter your Guardian Email Address (e.g., username@gmail.com)"
-                                    value={person.guardian_email}
-
+                                    value={person.guardian_email ?? ""}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
 
                                 />
                             </Box>
@@ -1642,10 +1652,10 @@ const StudentDashboard2 = () => {
                                 <Select
                                     labelId="annual-income-label"
                                     name="annual_income"
-                                    readOnly
                                     value={person.annual_income || ""}
                                     label="Annual Income"
-
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
                                 >
                                     <MenuItem value=""><em>Select Annual Income</em></MenuItem>
                                     <MenuItem value="80,000 and below">80,000 and below</MenuItem>
@@ -1662,11 +1672,19 @@ const StudentDashboard2 = () => {
                         </Box>
 
 
+
+
+
+
+
+
+
                         <Box display="flex" justifyContent="space-between" mt={4}>
                             {/* Previous Page Button */}
                             <Button
                                 variant="contained"
                                 component={Link}
+
                                 to="/student_dashboard1"
                                 startIcon={
                                     <ArrowBackIcon
@@ -1679,6 +1697,8 @@ const StudentDashboard2 = () => {
                                 sx={{
                                     backgroundColor: subButtonColor,
                                     border: `2px solid ${borderColor}`,
+
+
                                     color: "#000",
                                     "&:hover": {
                                         backgroundColor: "#000000",
@@ -1694,19 +1714,15 @@ const StudentDashboard2 = () => {
 
                             <Button
                                 variant="contained"
-                                onClick={(e) => {
+                                onClick={() => {
                                     handleUpdate();
-                                    if (isFormValid()) {
-                                        navigate("/student_dashboard3");
-                                    } else {
-                                        alert("Please complete all required fields before proceeding.");
-                                    }
+                                    navigate("/student_dashboard3");
                                 }}
                                 endIcon={
                                     <ArrowForwardIcon
                                         sx={{
-                                            color: '#fff',
-                                            transition: 'color 0.3s',
+                                            color: "#fff",
+                                            transition: "color 0.3s",
                                         }}
                                     />
                                 }
@@ -1716,7 +1732,6 @@ const StudentDashboard2 = () => {
                                     color: '#fff',
                                     '&:hover': {
                                         backgroundColor: "#000000",
-
                                         color: '#fff',
                                         '& .MuiSvgIcon-root': {
                                             color: '#fff',
@@ -1726,7 +1741,6 @@ const StudentDashboard2 = () => {
                             >
                                 Next Step
                             </Button>
-
                         </Box>
 
 

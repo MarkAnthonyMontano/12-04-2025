@@ -106,6 +106,7 @@ const ExaminationProfile = ({ personId }) => {
         { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
 
 
     ];
@@ -144,10 +145,19 @@ const ExaminationProfile = ({ personId }) => {
     const [activeStep, setActiveStep] = useState(3);
     const [clickedSteps, setClickedSteps] = useState(Array(tabs.length).fill(false));
 
+
     const handleStepClick = (index, to) => {
         setActiveStep(index);
-        navigate(to);
+
+        const pid = sessionStorage.getItem("admin_edit_person_id");
+        if (pid) {
+            navigate(`${to}?person_id=${pid}`);
+        } else {
+            navigate(to);
+        }
     };
+
+
 
     const [searchQuery, setSearchQuery] = useState("");
     const [persons, setPersons] = useState([]);
