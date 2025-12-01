@@ -141,7 +141,13 @@ const YearUpdateForm = () => {
         </thead>
         <tbody>
           {years.map((year) => (
-            <tr key={year.year_id}>
+            <tr
+              key={year.year_id}
+              style={{
+                backgroundColor: year.status === 1 ? "#d4edda" : "transparent", // ✅ light green if active
+                color: year.status === 1 ? "#155724" : "inherit", // dark green text for contrast
+              }}
+            >
               <td className="p-2 border" style={{ border: `2px solid ${borderColor}`, width: "33.33%" }}>
                 {year.year_description}
               </td>
@@ -150,7 +156,11 @@ const YearUpdateForm = () => {
               </td>
               <td className="p-2 border" style={{ border: `2px solid ${borderColor}`, width: "33.33%" }}>
                 <button
-                  className={`px-3 py-1 rounded text-white w-[140px] ${year.status === 1 ? "bg-red-600" : "bg-green-600"}`}
+                  className={`px-3 py-1 rounded text-white w-[140px]`}
+                  style={{
+                    backgroundColor: year.status === 1 ? "#DC2626" : "#16A34A", // red if active, green if inactive
+                    cursor: "pointer",
+                  }}
                   onClick={() => toggleActivator(year.year_id, year.status)}
                 >
                   {year.status === 1 ? "Deactivate" : "Activate"}

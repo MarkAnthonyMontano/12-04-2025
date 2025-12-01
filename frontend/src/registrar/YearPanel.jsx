@@ -151,7 +151,7 @@ const YearPanel = () => {
           <Typography sx={{ color: subtitleColor, fontWeight: "bold", mb: 1, fontSize: "18px" }}>
             Add New Year
           </Typography>
-           <Typography fontWeight={500}>Year Panel:</Typography>
+          <Typography fontWeight={500}>Year Panel:</Typography>
           <input
             type="text"
             placeholder="Enter year (e.g., 2026)"
@@ -218,16 +218,19 @@ const YearPanel = () => {
             <tbody>
               {years.length > 0 ? (
                 years.map((year) => (
-                  <tr key={year.year_id}>
+                  <tr
+                    key={year.year_id}
+                    style={{
+                      backgroundColor: year.status === 1 ? "#d4edda" : "transparent", // ✅ light green if active
+                      color: year.status === 1 ? "#155724" : "inherit", // dark green text for contrast
+                      fontWeight: year.status === 1 ? "bold" : "normal",
+                    }}
+                  >
                     <td style={{ border: `2px solid ${borderColor}`, padding: "8px" }}>
                       {year.year_description}
                     </td>
                     <td style={{ border: `2px solid ${borderColor}`, padding: "8px" }}>
-                      {year.status === 1 ? (
-                        <span style={{ color: "green", fontWeight: "bold" }}>Active</span>
-                      ) : (
-                        <span style={{ color: "gray" }}>Inactive</span>
-                      )}
+                      {year.status === 1 ? "Active" : "Inactive"}
                     </td>
                   </tr>
                 ))
@@ -239,6 +242,7 @@ const YearPanel = () => {
                 </tr>
               )}
             </tbody>
+
           </table>
         </Box>
       </Box>

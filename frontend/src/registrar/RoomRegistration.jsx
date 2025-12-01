@@ -182,39 +182,70 @@ const RoomRegistration = () => {
   }, []);
 
   // 🔹 Add new room
-  const handleAddRoom = async () => {
-    if (!roomName.trim() || !buildingName.trim()) {
-      setSnack({
-        open: true,
-        message: "Room name and building name are required",
-        severity: "warning",
-      });
-      return;
-    }
+ const handleAddRoom = async () => {
+  if (!roomName.trim() || !buildingName.trim()) {
+    setSnack({
+      open: true,
+      message: "Room name and building name are required",
+      severity: "warning",
+    });
+    return;
+  }
 
-    try {
-      await axios.post(`${API_BASE_URL}/room`, {
-        room_name: roomName,
-        building_name: buildingName,
-      });
+  try {
+    await axios.post(`${API_BASE_URL}/room`, {
+      room_name: roomName,
+      building_name: buildingName,
+    });
 
-      setSnack({
-        open: true,
-        message: "Room successfully added",
-        severity: "success",
-      });
-      setRoomName("");
-      setBuildingName("");
-      fetchRoomList();
-    } catch (err) {
-      console.error("Error adding room:", err);
-      setSnack({
-        open: true,
-        message: "Failed to add room",
-        severity: "error",
-      });
-    }
-  };
+    setSnack({
+      open: true,
+      message: "Room successfully added",
+      severity: "success",
+    });
+    setRoomName("");
+    setBuildingName("");
+    fetchRoomList();
+  } catch (err) {
+    console.error("Error adding room:", err);
+
+    setSnack({
+      open: true,
+      message: err.response?.data?.message || "Failed to add room",
+      severity: "error",
+    });
+  }
+};
+
+// Update room
+const handleUpdateRoom = async () => {
+  if (!editingRoom) return;
+
+  try {
+    await axios.put(`${API_BASE_URL}/room/${editingRoom.room_id}`, {
+      building_name: buildingName,
+      room_name: roomName,
+    });
+
+    setSnack({
+      open: true,
+      message: "Room updated successfully",
+      severity: "success",
+    });
+    setEditingRoom(null);
+    setBuildingName("");
+    setRoomName("");
+    fetchRoomList();
+  } catch (err) {
+    console.error("Error updating room:", err);
+
+    setSnack({
+      open: true,
+      message: err.response?.data?.message || "Failed to update room",
+      severity: "error",
+    });
+  }
+};
 
   // 🔹 Edit room
   const handleEditRoom = (room) => {
@@ -223,34 +254,6 @@ const RoomRegistration = () => {
     setRoomName(room.room_description);
   };
 
-  // 🔹 Update room
-  const handleUpdateRoom = async () => {
-    if (!editingRoom) return;
-
-    try {
-      await axios.put(`${API_BASE_URL}/room/${editingRoom.room_id}`, {
-        building_name: buildingName,
-        room_name: roomName,
-      });
-
-      setSnack({
-        open: true,
-        message: "Room updated successfully",
-        severity: "success",
-      });
-      setEditingRoom(null);
-      setBuildingName("");
-      setRoomName("");
-      fetchRoomList();
-    } catch (err) {
-      console.error("Error updating room:", err);
-      setSnack({
-        open: true,
-        message: "Failed to update room",
-        severity: "error",
-      });
-    }
-  };
 
   // 🔹 Delete room (automatic, no confirm)
   const handleDeleteRoom = async (roomId) => {

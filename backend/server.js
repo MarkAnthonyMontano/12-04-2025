@@ -17,14 +17,14 @@ const http = require("http").createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(http, {
   cors: {
-    origin: ["http://localhost:5173", "http://192.168.86.6:5173"],
+    origin: ["http://localhost:5173", "http://192.168.1.3:5173"],
     methods: ["GET", "POST"]
   }
 });
 
 app.use(express.json());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://192.168.86.6:5173"],  // ✅ Explicitly allow Vite dev server
+  origin: ["http://localhost:5173", "http://192.168.1.3:5173"],  // ✅ Explicitly allow Vite dev server
   credentials: true                  // ✅ Allow credentials (cookies, auth)
 }));
 
@@ -8666,7 +8666,7 @@ app.get("/get_year_level", async (req, res) => {
 });
 
 app.get("/get_active_semester", async (req, res) => {
-  try{
+  try {
     const semester = await db3.query(`
       SELECT smt.semester_description FROM active_school_year_table AS sy
       LEFT JOIN semester_table AS smt ON sy.semester_id = smt.semester_id
@@ -8715,7 +8715,7 @@ app.get("/get_semester", async (req, res) => {
   }
 });
 
-// GET SCHOOL YEAR (UPDATED!)
+// GET SCHOOL YEAR
 app.get("/school_years", async (req, res) => {
   const query = `
     SELECT sy.*, yt.year_description, s.semester_description 
@@ -8723,7 +8723,6 @@ app.get("/school_years", async (req, res) => {
     JOIN year_table yt ON sy.year_id = yt.year_id
     JOIN semester_table s ON sy.semester_id = s.semester_id
     ORDER BY yt.year_description
-
   `;
 
   try {
@@ -8735,7 +8734,8 @@ app.get("/school_years", async (req, res) => {
   }
 });
 
-// SCHOOL YEAR PANEL (UPDATED!)
+
+// CREATE SCHOOL YEAR
 app.post("/school_years", async (req, res) => {
   const { year_id, semester_id, activator } = req.body;
 
@@ -8744,13 +8744,18 @@ app.post("/school_years", async (req, res) => {
   }
 
   try {
-    // If activating a school year, deactivate all others first
-    if (activator === 1) {
-      const deactivateQuery = `UPDATE active_school_year_table SET astatus = 0`;
-      await db3.query(deactivateQuery);
+    // Check if the school year already exists
+    const checkQuery = `
+      SELECT * FROM active_school_year_table
+      WHERE year_id = ? AND semester_id = ?
+    `;
+    const [existing] = await db3.query(checkQuery, [year_id, semester_id]);
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "This school year already exists" });
     }
 
-    // Insert new school year record
+    // Insert if not exists
     const insertQuery = `
       INSERT INTO active_school_year_table (year_id, semester_id, astatus, active)
       VALUES (?, ?, ?, 0)
@@ -8764,31 +8769,50 @@ app.post("/school_years", async (req, res) => {
   }
 });
 
-// UPDATE SCHOOL YEAR INFORMATION (UPDATED!)
+
+// UPDATE SCHOOL YEAR (ACTIVATE/DEACTIVATE)
+// UPDATE SCHOOL YEAR (ACTIVATE/DEACTIVATE)
 app.put("/school_years/:id", async (req, res) => {
   const { id } = req.params;
   const { activator } = req.body;
 
   try {
     if (parseInt(activator) === 1) {
-      // First deactivate all, then activate the selected one
-      const deactivateAllQuery = "UPDATE active_school_year_table SET astatus = 0";
-      await db3.query(deactivateAllQuery);
+      // Deactivate all first
+      await db3.query("UPDATE active_school_year_table SET astatus = 0");
 
-      const activateQuery = "UPDATE active_school_year_table SET astatus = 1 WHERE id = ?";
-      await db3.query(activateQuery, [id]);
+      // Activate selected
+      await db3.query("UPDATE active_school_year_table SET astatus = 1 WHERE id = ?", [id]);
 
-      return res.status(200).json({ message: "School year activated and others deactivated" });
+      return res.status(200).json({ message: "School year activated" });
     } else {
-      // Just deactivate the selected one
-      const query = "UPDATE active_school_year_table SET astatus = 0 WHERE id = ?";
-      await db3.query(query, [id]);
-
+      // Deactivate selected
+      await db3.query("UPDATE active_school_year_table SET astatus = 0 WHERE id = ?", [id]);
       return res.status(200).json({ message: "School year deactivated" });
     }
   } catch (err) {
     console.error("Error:", err);
     res.status(500).json({ error: "Failed to update school year", details: err.message });
+  }
+});
+
+
+// DELETE SCHOOL YEAR
+app.delete("/school_years/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const deleteQuery = "DELETE FROM active_school_year_table WHERE id = ?";
+    const [result] = await db3.query(deleteQuery, [id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "School year not found" });
+    }
+
+    res.status(200).json({ message: "School year deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting school year:", err);
+    res.status(500).json({ error: "Failed to delete school year", details: err.message });
   }
 });
 
@@ -9005,9 +9029,9 @@ app.post("/section_table", async (req, res) => {
     const insertQuery = "INSERT INTO section_table (description) VALUES (?)";
     const [result] = await db3.query(insertQuery, [description]);
 
-    res.status(201).json({ 
-      message: "Section created successfully", 
-      sectionId: result.insertId 
+    res.status(201).json({
+      message: "Section created successfully",
+      sectionId: result.insertId
     });
   } catch (err) {
     console.error("Error inserting section:", err);
@@ -9227,7 +9251,17 @@ app.put("/api/update_prof/:id", upload.single("profileImage"), async (req, res) 
       return res.json({ success: false, error: "Email already exists for another professor." });
     }
 
-    let profileImage = req.file ? req.file.filename : null;
+    let profileImage = null;
+
+    if (req.file) {
+      const year = new Date().getFullYear();
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      const filename = `${person_id}_ProfessorProfile_${year}${ext}`;
+      const filePath = path.join(__dirname, "uploads", filename);
+      await fs.promises.writeFile(filePath, req.file.buffer);
+      profileImage = filename;
+    }
+
     let updateSQL;
     let values;
 
@@ -12878,12 +12912,12 @@ app.get("/api/section_assigned_to/:userID/:selectedSchoolYear/:selectedSchoolSem
   const { userID, selectedSchoolYear, selectedSchoolSemester } = req.params;
   try {
     const [schoolYearRows] = await db3.execute("SELECT id FROM active_school_year_table WHERE year_id = ? AND semester_id = ?", [selectedSchoolYear, selectedSchoolSemester]);
-    if (schoolYearRows.length === 0) { 
+    if (schoolYearRows.length === 0) {
       return res.status(404).json({ error: "Active school year not found" });
     }
 
     const selectedActiveSchoolYear = schoolYearRows[0].id;
-    
+
     const [rows] = await db3.execute(`
       SELECT DISTINCT
 		st.id AS section_id,
@@ -13044,7 +13078,7 @@ app.post("/api/grades/import", upload.single("file"), async (req, res) => {
 });
 
 app.get("/api/section_assigned_to/:userID", async (req, res) => {
-  const { userID} = req.params;
+  const { userID } = req.params;
   try {
     const [rows] = await db3.execute(`
       SELECT DISTINCT

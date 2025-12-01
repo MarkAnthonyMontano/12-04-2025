@@ -160,25 +160,36 @@ const SchoolYearActivatorPanel = () => {
                 </thead>
                 <tbody>
                     {schoolYears.map((sy) => (
-                        <tr key={sy.id}>
-                            <td className="p-2 border" style={{ border: `2px solid ${borderColor}` }}>{`${sy.year_description}-${parseInt(sy.year_description) + 1}`}</td>
-                            <td className="p-2 border" style={{ border: `2px solid ${borderColor}` }}>{sy.semester_description}</td>
-                            <td className="p-2 border" style={{ border: `2px solid ${borderColor}` }}>{sy.astatus === 1 ? "Active" : "Inactive"}</td>
+                        <tr
+                            key={sy.id}
+                            style={{
+                                backgroundColor: sy.astatus === 1 ? "#d4edda" : "transparent", // ✅ light green if active
+                                color: sy.astatus === 1 ? "#155724" : "inherit", // dark green text for contrast
+                            }}
+                        >
+                            <td className="p-2 border" style={{ border: `2px solid ${borderColor}` }}>
+                                {`${sy.year_description}-${parseInt(sy.year_description) + 1}`}
+                            </td>
+                            <td className="p-2 border" style={{ border: `2px solid ${borderColor}` }}>
+                                {sy.semester_description}
+                            </td>
+                            <td className="p-2 border" style={{ border: `2px solid ${borderColor}` }}>
+                                {sy.astatus === 1 ? "Active" : "Inactive"}
+                            </td>
                             <td className="p-2 border" style={{ border: `2px solid ${borderColor}` }}>
                                 <button
                                     onClick={() => toggleActivator(sy.id, sy.astatus)}
                                     style={{
-                                        width: "140px", // ✅ Adjusted width
+                                        width: "140px",
                                         padding: "6px 12px",
                                         borderRadius: "4px",
                                         color: "white",
-                                        backgroundColor: sy.astatus === 1 ? "#DC2626" : "#16A34A",
+                                        backgroundColor: sy.astatus === 1 ? "#DC2626" : "#16A34A", // red if active, green if inactive
                                         cursor: "pointer",
                                     }}
                                 >
                                     {sy.astatus === 1 ? "Deactivate" : "Activate"}
                                 </button>
-
                             </td>
                         </tr>
                     ))}

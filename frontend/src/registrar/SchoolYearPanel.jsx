@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext } from "react"; 
+import React, { useState, useEffect, useContext } from "react";
 import { SettingsContext } from "../App";
 import axios from "axios";
-import { Box, Typography, Snackbar, Alert } from "@mui/material";
+import { Box, Typography, Snackbar, Alert, Button } from "@mui/material";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
@@ -118,6 +118,16 @@ const SchoolYearPanel = () => {
       return;
     }
 
+    // Check for duplicate
+    const duplicate = schoolYears.find(
+      (sy) => sy.year_id === selectedYear && sy.semester_id === selectedSemester
+    );
+
+    if (duplicate) {
+      setSnackbar({ open: true, message: "This school year already exists", severity: "error" });
+      return;
+    }
+
     try {
       await axios.post(`${API_BASE_URL}/school_years`, {
         year_id: selectedYear,
@@ -130,7 +140,8 @@ const SchoolYearPanel = () => {
       setSnackbar({ open: true, message: "School year added successfully!", severity: "success" });
     } catch (err) {
       console.error("Error saving school year:", err);
-      setSnackbar({ open: true, message: "Failed to save school year", severity: "error" });
+      const message = err.response?.data?.error || "Failed to save school year";
+      setSnackbar({ open: true, message, severity: "error" });
     }
   };
 
@@ -141,24 +152,61 @@ const SchoolYearPanel = () => {
 
   const getStatus = (activatorValue) => (activatorValue === 1 ? "Active" : "Inactive");
 
-  // 🔒 Disable right-click & DevTools
-  useEffect(() => {
-    const handleContextMenu = (e) => e.preventDefault();
-    const handleKeyDown = (e) => {
-      const blocked = ['F12', 'F11'];
-      if (blocked.includes(e.key) || 
-          (e.ctrlKey && e.shiftKey && ['i', 'j'].includes(e.key.toLowerCase())) || 
-          (e.ctrlKey && ['u', 'p'].includes(e.key.toLowerCase()))) {
-        e.preventDefault(); e.stopPropagation();
-      }
-    };
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
+  const [editID, setEditID] = useState(null); // To track which school year is being edited
+
+  // Handle Delete
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this school year?")) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/school_years/${id}`);
+      setSnackbar({ open: true, message: "School year deleted successfully!", severity: "success" });
+      fetchSchoolYears();
+    } catch (err) {
+      console.error("Error deleting school year:", err);
+      setSnackbar({ open: true, message: "Failed to delete school year", severity: "error" });
+    }
+  };
+
+  // Handle Edit (populate form for editing)
+  const handleEdit = (sy) => {
+    setSelectedYear(sy.year_id);
+    setSelectedSemester(sy.semester_id);
+    setEditID(sy.school_year_id); // assuming your backend returns school_year_id
+  };
+
+  // Handle Update
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!selectedYear || !selectedSemester) {
+      setSnackbar({ open: true, message: "Please select both Year and Semester", severity: "warning" });
+      return;
+    }
+
+    try {
+      await axios.put(`${API_BASE_URL}/school_years/${editID}`, {
+        year_id: selectedYear,
+        semester_id: selectedSemester,
+      });
+      setSnackbar({ open: true, message: "School year updated successfully!", severity: "success" });
+      setSelectedYear("");
+      setSelectedSemester("");
+      setEditID(null);
+      fetchSchoolYears();
+    } catch (err) {
+      console.error("Error updating school year:", err);
+      setSnackbar({ open: true, message: "Failed to update school year", severity: "error" });
+    }
+  };
+
+  const handleSubmitOrUpdate = (e) => {
+    if (editID) {
+      handleUpdate(e);
+    } else {
+      handleSubmit(e);
+    }
+  };
+
+
 
   if (loading || hasAccess === null) return <LoadingOverlay open={loading} message="Check Access" />;
   if (!hasAccess) return <Unauthorized />;
@@ -177,11 +225,11 @@ const SchoolYearPanel = () => {
         {/* Left Container: Form */}
         <Box sx={{ flex: 1, p: 3, bgcolor: "#fff", border: `2px solid ${borderColor}`, boxShadow: 2, width: 800, borderRadius: 2, minWidth: "300px" }}>
           <Typography variant="h6" mb={2} style={{ color: subtitleColor }}>
-            Add New School Year
+            {editID ? "Edit School Year" : "Add New School Year"}
           </Typography>
-          <form onSubmit={handleSubmit} className="grid gap-4">
+          <form onSubmit={handleSubmitOrUpdate} className="grid gap-4">
             <div>
-               <Typography fontWeight={500}>Year Level:</Typography>
+              <Typography fontWeight={500}>Year Level:</Typography>
               <select
                 className="border p-2 w-full rounded"
                 value={selectedYear}
@@ -195,7 +243,7 @@ const SchoolYearPanel = () => {
             </div>
 
             <div>
-            <Typography fontWeight={500}>Semester:</Typography>
+              <Typography fontWeight={500}>Semester:</Typography>
               <select
                 className="border p-2 w-full rounded"
                 value={selectedSemester}
@@ -213,10 +261,11 @@ const SchoolYearPanel = () => {
               className="bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded"
               style={{ backgroundColor: "#1967d2" }}
             >
-              Save
+              {editID ? "Update" : "Save"}
             </button>
           </form>
         </Box>
+
 
         {/* Right Container: Table */}
         <Box sx={{ flex: 1, p: 3, bgcolor: "#fff", boxShadow: 2, border: `2px solid ${borderColor}`, borderRadius: 2, minWidth: "300px" }}>
@@ -224,28 +273,91 @@ const SchoolYearPanel = () => {
             Saved School Years
           </Typography>
           <Box sx={{ maxHeight: 350, overflowY: "auto" }}>
-            <table style={{ border: `2px solid ${borderColor}` }} className="w-full border border-gray-300 text-sm">
+            <table
+              className="w-full text-sm"
+              style={{ borderCollapse: "collapse", border: `2px solid ${borderColor}` }}
+            >
               <thead>
                 <tr style={{ backgroundColor: settings?.header_color || "#1976d2", color: "#ffffff" }}>
-                  <th style={{ border: `2px solid ${borderColor}` }} className="p-2 border">Year Level</th>
-                  <th style={{ border: `2px solid ${borderColor}` }} className="p-2 border">Semester</th>
-                  <th style={{ border: `2px solid ${borderColor}` }} className="p-2 border">Status</th>
+                  <th
+                    className="p-2 text-center"
+                    style={{ border: `2px solid ${borderColor}` }}
+                  >
+                    Year Level
+                  </th>
+                  <th
+                    className="p-2 text-center"
+                    style={{ border: `2px solid ${borderColor}` }}
+                  >
+                    Semester
+                  </th>
+                  <th
+                    className="p-2 text-center"
+                    style={{ border: `2px solid ${borderColor}` }}
+                  >
+                    Status
+                  </th>
+                  <th
+                    className="p-2 text-center"
+                    style={{ border: `2px solid ${borderColor}` }}
+                  >
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {schoolYears.map((sy, index) => (
-                  <tr key={index}>
-                    <td style={{ border: `2px solid ${borderColor}` }} className="p-2 border text-center">
+                  <tr
+                    key={index}
+                    style={{
+                      backgroundColor: sy.astatus === 1 ? "#d4edda" : "transparent", // green background for active
+                      color: sy.astatus === 1 ? "#155724" : "inherit",              // dark green text for contrast
+                    }}
+                  >
+                    <td className="p-2 text-center" style={{ border: `2px solid ${borderColor}` }}>
                       {`${sy.year_description}-${parseInt(sy.year_description) + 1}`}
                     </td>
-                    <td style={{ border: `2px solid ${borderColor}` }} className="p-2 border text-center">{sy.semester_description}</td>
-                    <td style={{ border: `2px solid ${borderColor}` }} className="p-2 border text-center">{sy.astatus === 1 ? "Active" : "Inactive"}</td>
+                    <td className="p-2 text-center" style={{ border: `2px solid ${borderColor}` }}>
+                      {sy.semester_description}
+                    </td>
+                    <td className="p-2 text-center" style={{ border: `2px solid ${borderColor}` }}>
+                      {sy.astatus === 1 ? "Active" : "Inactive"}
+                    </td>
+                    <td className="p-2 text-center" style={{ border: `2px solid ${borderColor}` }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          backgroundColor: "green",
+                          color: "white",
+                          mr: 1,
+                          "&:hover": { backgroundColor: "#006400" }
+                        }}
+                        onClick={() => handleEdit(sy)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          backgroundColor: "#B22222",
+                          color: "white",
+                          "&:hover": { backgroundColor: "#8B0000" }
+                        }}
+                        onClick={() => handleDelete(sy.id)}
+                      >
+                        Delete
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
           </Box>
         </Box>
+
       </Box>
 
       {/* Snackbar */}

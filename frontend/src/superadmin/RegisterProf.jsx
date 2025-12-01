@@ -31,6 +31,10 @@ import SearchIcon from "@mui/icons-material/Search";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import API_BASE_URL from "../apiConfig";
+
+
+
+
 const RegisterProf = () => {
   const settings = useContext(SettingsContext);
 
@@ -275,6 +279,8 @@ const RegisterProf = () => {
 
   const handleSubmit = async () => {
     const requiredFields = ["fname", "lname", "email"];
+
+    // Only required when creating a new professor
     if (!editData) {
       requiredFields.push("password", "profileImage", "person_id");
     }
@@ -286,13 +292,20 @@ const RegisterProf = () => {
     }
 
     const formData = new FormData();
+
     Object.entries(form).forEach(([key, value]) => {
+      // 💡 If editing and password is empty → DO NOT send it
+      if (editData && key === "password" && value === "") return;
+
       if (value) formData.append(key, value);
     });
 
     try {
       if (editData) {
-        await axios.put(`${API_BASE_URL}/api/update_prof/${editData.prof_id}`, formData);
+        await axios.put(
+          `${API_BASE_URL}/api/update_prof/${editData.prof_id}`,
+          formData
+        );
         setSnackbarMessage("Professor updated successfully!");
         setSnackbarSeverity("success");
       } else {
@@ -301,7 +314,8 @@ const RegisterProf = () => {
         setSnackbarSeverity("success");
       }
 
-      setOpenSnackbar(true); // show snackbar
+      setOpenSnackbar(true);
+
       setTimeout(() => {
         fetchProfessors();
       }, 500);
@@ -311,9 +325,8 @@ const RegisterProf = () => {
       console.error("Submit Error:", err);
       setSnackbarMessage(err.response?.data?.error || "An error occurred");
       setSnackbarSeverity("error");
-      setOpenSnackbar(true); // show snackbar
+      setOpenSnackbar(true);
     }
-
   };
 
   const handleEdit = (prof) => {
@@ -324,7 +337,7 @@ const RegisterProf = () => {
       mname: prof.mname || "",
       lname: prof.lname,
       email: prof.email,
-      password: "",
+      password: "", // empty means optional
       role: prof.role || "faculty",
       dprtmnt_id: prof.dprtmnt_id || "",
       profileImage: null,
@@ -835,8 +848,8 @@ const RegisterProf = () => {
                 <TableCell sx={{ border: `2px solid ${borderColor}` }}>{`${prof.fname} ${prof.mname || ""} ${prof.lname}`}</TableCell>
                 <TableCell sx={{ border: `2px solid ${borderColor}` }}>{prof.email}</TableCell>
                 <TableCell sx={{ border: `2px solid ${borderColor}` }}>{prof.dprtmnt_name} ({prof.dprtmnt_code})</TableCell>
-                <TableCell sx={{ border: `2px solid ${borderColor}` }}>{prof.role}</TableCell>
-                <TableCell sx={{ border: `2px solid ${borderColor}`, }}>
+                <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center" }}>{prof.role}</TableCell>
+                <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center" }}>
                   <Button
                     onClick={() => handleEdit(prof)}
                     sx={{
@@ -851,7 +864,7 @@ const RegisterProf = () => {
                     EDIT
                   </Button>
                 </TableCell>
-                <TableCell sx={{ border: `2px solid ${borderColor}` }}>
+                <TableCell sx={{ border: `2px solid ${borderColor}` , textAlign: "center" }}>
                   <Button
                     onClick={() => handleToggleStatus(prof.prof_id, prof.status)}
                     sx={{
@@ -871,147 +884,125 @@ const RegisterProf = () => {
         </Table>
       </TableContainer>
 
-      {/* ➕ / ✏️ Professor Modal */}
       <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ color: "maroon", fontWeight: "bold" }}>
-          {editData ? "Edit Professor" : "Add New Professor"}
-        </DialogTitle>
-        <hr style={{ border: "1px solid #ccc", width: "100%" }} />
+        <DialogTitle>{editData ? "Edit Professor" : "Add Professor"}</DialogTitle>
 
-        <DialogContent sx={{ mt: 2 }}>
-          <Stack spacing={2}>
-            {/* 🔹 Profile Picture Upload */}
-            <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-start">
-              <Avatar
-                src={
-                  form.preview ||
-                  (editData?.profile_image
-                    ? `${API_BASE_URL}/uploads/${editData.profile_image}`
-                    : "")
-                }
-                alt={form.fname || "Profile"}
-                sx={{
-                  width: 80,
-                  height: 80,
-                  border: `2px solid ${borderColor}`,
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                }}
-              />
-              <Button
-                variant="outlined"
-                component="label"
-                sx={{
-                  borderColor: "#6D2323",
-                  color: "#6D2323",
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  "&:hover": { borderColor: "#800000", color: "#800000" },
-                }}
-              >
-                Upload Image
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      setForm({
-                        ...form,
-                        profileImage: file,
-                        preview: URL.createObjectURL(file),
-                      });
-                    }
-                  }}
-                />
-              </Button>
-            </Stack>
+        <DialogContent dividers>
 
-            <TextField
-              label="Employee ID"
-              name="person_id"
-              value={form.person_id}
-              onChange={handleChange}
-              fullWidth
-              autoComplete="off"
-            />
-            <TextField
-              label="First Name"
-              name="fname"
-              value={form.fname}
-              onChange={handleChange}
-              fullWidth
-              autoComplete="off"
-            />
-            <TextField
-              label="Middle Name"
-              name="mname"
-              value={form.mname}
-              onChange={handleChange}
-              fullWidth
-              autoComplete="off"
-            />
-            <TextField
-              label="Last Name"
-              name="lname"
-              value={form.lname}
-              onChange={handleChange}
-              fullWidth
-              autoComplete="off"
-            />
-            <TextField
-              label="Email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              fullWidth
-              autoComplete="off"
-            />
-            {!editData && (
-              <TextField
-                label="Password"
-                name="password"
-                type="password"
-                value={form.password}
-                onChange={handleChange}
-                fullWidth
-                autoComplete="new-password"
-              />
-            )}
+          {/* PERSON ID */}
+          <TextField
+            label="Person ID"
+            name="person_id"
+            fullWidth
+            margin="dense"
+            value={form.person_id}
+            onChange={handleChange}
+            disabled={!!editData}   // disable when editing
+          />
 
-            {/* 🔹 Department Dropdown */}
-            <FormControl fullWidth>
-              <InputLabel id="department-label">Department</InputLabel>
-              <Select
-                labelId="department-label"
-                name="dprtmnt_id"
-                value={form.dprtmnt_id || ""}
-                label="Department"
-                onChange={handleSelect}
-              >
-                {department.map((dep) => (
-                  <MenuItem key={dep.dprtmnt_id} value={dep.dprtmnt_id}>
-                    {dep.dprtmnt_name} ({dep.dprtmnt_code})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Stack>
+          {/* FIRST NAME */}
+          <TextField
+            label="First Name"
+            name="fname"
+            fullWidth
+            margin="dense"
+            value={form.fname}
+            onChange={handleChange}
+          />
+
+          {/* MIDDLE NAME */}
+          <TextField
+            label="Middle Name"
+            name="mname"
+            fullWidth
+            margin="dense"
+            value={form.mname}
+            onChange={handleChange}
+          />
+
+          {/* LAST NAME */}
+          <TextField
+            label="Last Name"
+            name="lname"
+            fullWidth
+            margin="dense"
+            value={form.lname}
+            onChange={handleChange}
+          />
+
+          {/* EMAIL */}
+          <TextField
+            label="Email"
+            name="email"
+            fullWidth
+            margin="dense"
+            value={form.email}
+            onChange={handleChange}
+          />
+
+          {/* PASSWORD – only when adding */}
+          {!editData && (
+            <TextField
+              label="Password"
+              name="password"
+              type="password"
+              fullWidth
+              margin="dense"
+              value={form.password}
+              onChange={handleChange}
+            />
+          )}
+
+          {/* DEPARTMENT */}
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Department</InputLabel>
+            <Select
+              name="dprtmnt_id"
+              value={form.dprtmnt_id}
+              onChange={handleSelect}
+              label="Department"
+            >
+              {department.map((dep) => (
+                <MenuItem key={dep.dprtmnt_id} value={dep.dprtmnt_id}>
+                  {dep.dprtmnt_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            margin="dense"
+            label="Password"
+            name="password"
+            type="password"
+            fullWidth
+            value={form.password || ""}
+            onChange={handleChange}
+            placeholder={editData ? "Leave blank to keep current password" : ""}
+          />
+
+
+
+          {/* IMAGE UPLOAD */}
+          <Button variant="outlined" component="label" sx={{ mt: 2 }}>
+            Upload Image
+            <input hidden type="file" name="profileImage" accept="image/*" onChange={handleChange} />
+          </Button>
+
+          {form.preview && (
+            <img
+              src={form.preview}
+              alt="Preview"
+              style={{ width: 100, marginTop: 10, borderRadius: 8 }}
+            />
+          )}
+
         </DialogContent>
 
         <DialogActions>
           <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            sx={{
-              backgroundColor: mainButtonColor,
-              "&:hover": { backgroundColor: "#000000" },
-              fontWeight: "bold",
-            }}
-          >
-            {editData ? "Save Changes" : "Register"}
+          <Button variant="contained" onClick={handleSubmit}>
+            {editData ? "Update" : "Register"}
           </Button>
         </DialogActions>
       </Dialog>
