@@ -414,7 +414,7 @@ const AssignScheduleToApplicants = () => {
   // handleUnassignImmediate
   const handleUnassignImmediate = async (applicant_number) => {
     try {
-      await axios.post("${API_BASE_URL}/unassign_schedule", { applicant_number });
+      await axios.post(`${API_BASE_URL}/unassign_schedule`, { applicant_number });
 
       setPersons(prev =>
         prev.map(p =>

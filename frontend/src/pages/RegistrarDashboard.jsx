@@ -17,13 +17,14 @@ import {
   Stack,
   Divider,
   Paper,
-  Tooltip,
 } from "@mui/material";
 import GroupIcon from "@mui/icons-material/Groups";
 import SchoolIcon from "@mui/icons-material/School";
 import PersonIcon from "@mui/icons-material/Person";
 import { ArrowBackIos, ArrowForwardIos } from "@mui/icons-material";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Legend,} from "recharts";
+import { Tooltip } from "recharts";
+import MuiTooltip from "@mui/material/Tooltip";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import ExaminationProfile from "../registrar/ExaminationProfile";
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
@@ -753,7 +754,7 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
                     );
 
                     return isHoliday ? (
-                      <Tooltip
+                      <MuiTooltip
                         key={`${i}-${j}`}
                         title={
                           <>
@@ -765,7 +766,7 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
                         placement="top"
                       >
                         {dayCell}
-                      </Tooltip>
+                      </MuiTooltip>
                     ) : (
                       <React.Fragment key={`${i}-${j}`}>{dayCell}</React.Fragment>
                     );

@@ -16,20 +16,16 @@ import {
   Select,
   InputLabel,
   Avatar,
-  Stack,
-  Divider,
-  Paper,
-  Tooltip,
 } from "@mui/material";
-import GroupIcon from "@mui/icons-material/Groups";
-import SchoolIcon from "@mui/icons-material/School";
-import PersonIcon from "@mui/icons-material/Person";
 import { ArrowBackIos, ArrowForwardIos } from "@mui/icons-material";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from "recharts";
+import { Tooltip } from "recharts";
+import MuiTooltip from "@mui/material/Tooltip";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import API_BASE_URL from "../apiConfig";
 import EaristLogo from "../assets/EaristLogo.png";
+
+
 const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
 
   const settings = useContext(SettingsContext);
@@ -150,6 +146,173 @@ const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
     }
   };
 
+  const [persons, setPersons] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [person, setPerson] = useState({
+    campus: "",
+    last_name: "",
+    first_name: "",
+    middle_name: "",
+    document_status: "",
+    extension: "",
+    emailAddress: "",
+    program: "",
+    created_at: ""
+  });
+  const [selectedApplicantStatus, setSelectedApplicantStatus] = useState("");
+
+  const [applicants, setApplicants] = useState([]);
+
+  const [curriculumOptions, setCurriculumOptions] = useState([]);
+  const [adminData, setAdminData] = useState({ dprtmnt_id: "" });
+  useEffect(() => {
+    if (!adminData.dprtmnt_id) return;
+
+    const fetchCurriculums = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/applied_program/${adminData.dprtmnt_id}`);
+        console.log("✅ curriculumOptions:", response.data);
+        setCurriculumOptions(response.data);
+      } catch (error) {
+        console.error("Error fetching curriculum options:", error);
+      }
+    };
+
+    fetchCurriculums();
+  }, [adminData.dprtmnt_id]);
+
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/api/applied_program`)
+      .then(res => {
+        setAllCurriculums(res.data);
+        setCurriculumOptions(res.data);
+      });
+  }, []);
+
+
+
+
+  const [allCurriculums, setAllCurriculums] = useState([]);
+  const [schoolYears, setSchoolYears] = useState([]);
+  const [semesters, setSchoolSemester] = useState([]);
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState("");
+  const [selectedSchoolSemester, setSelectedSchoolSemester] = useState('');
+  const [selectedActiveSchoolYear, setSelectedActiveSchoolYear] = useState('');
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/get_school_year/`)
+      .then((res) => setSchoolYears(res.data))
+      .catch((err) => console.error(err));
+  }, [])
+
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/get_school_semester/`)
+      .then((res) => setSchoolSemester(res.data))
+      .catch((err) => console.error(err));
+  }, [])
+
+  useEffect(() => {
+
+    axios
+      .get(`${API_BASE_URL}/active_school_year`)
+      .then((res) => {
+        if (res.data.length > 0) {
+          setSelectedSchoolYear(res.data[0].year_id);
+          setSelectedSchoolSemester(res.data[0].semester_id);
+        }
+      })
+      .catch((err) => console.error(err));
+
+  }, []);
+
+  const handleSchoolYearChange = (event) => {
+    setSelectedSchoolYear(event.target.value);
+  };
+
+  const handleSchoolSemesterChange = (event) => {
+    setSelectedSchoolSemester(event.target.value);
+  };
+
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState("");
+  const [selectedProgramFilter, setSelectedProgramFilter] = useState("");
+  const [department, setDepartment] = useState([]);
+
+  const filteredPersons = persons.filter((personData) => {
+    const programInfo = allCurriculums.find(
+      (opt) => opt.curriculum_id?.toString() === personData.program?.toString()
+    );
+
+    const matchesDepartment =
+      selectedDepartmentFilter === "" ||
+      programInfo?.dprtmnt_name === selectedDepartmentFilter;
+
+    const matchesProgramFilter =
+      selectedProgramFilter === "" ||
+      programInfo?.program_code === selectedProgramFilter;
+
+    const applicantAppliedYear = new Date(personData.created_at).getFullYear();
+    const schoolYear = schoolYears.find((sy) => sy.year_id === selectedSchoolYear);
+
+    const matchesSchoolYear =
+      selectedSchoolYear === "" ||
+      (schoolYear &&
+        String(applicantAppliedYear) === String(schoolYear.current_year));
+
+    const matchesSemester =
+      selectedSchoolSemester === "" ||
+      String(personData.middle_code) === String(selectedSchoolSemester);
+
+    return (
+      matchesDepartment &&
+      matchesProgramFilter &&
+      matchesSchoolYear &&
+      matchesSemester
+    );
+  });
+
+
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/api/departments`); // ✅ Update if needed
+        setDepartment(response.data);
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
+
+  useEffect(() => {
+    if (department.length > 0 && !selectedDepartmentFilter) {
+      const firstDept = department[0].dprtmnt_name;
+      setSelectedDepartmentFilter(firstDept);
+      handleDepartmentChange(firstDept); // if you also want to trigger it
+    }
+  }, [department, selectedDepartmentFilter]);
+
+  const handleDepartmentChange = (selectedDept) => {
+    setSelectedDepartmentFilter(selectedDept);
+    if (!selectedDept) {
+      setCurriculumOptions(allCurriculums);
+    } else {
+      setCurriculumOptions(
+        allCurriculums.filter(opt => opt.dprtmnt_name === selectedDept)
+      );
+    }
+    setSelectedProgramFilter("");
+  };
+
+
+
+
+  const maxButtonsToShow = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxButtonsToShow / 2));
 
 
   const formattedDate = new Date().toLocaleDateString("en-US", {
@@ -221,32 +384,7 @@ const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
     fetchRegistrarCount();
   }, []);
 
-  const stats = [
-    {
-      label: "Total Applicants",
-      value: enrolledCount,
-      icon: <GroupIcon fontSize="large" />,
-      color: "#F6D167", // soft yellow
-    },
-    {
-      label: "Enrolled Students",
-      value: acceptedCount,
-      icon: <SchoolIcon fontSize="large" />,
-      color: "#84B082", // green
-    },
-    {
-      label: "Professors",
-      value: professorCount,
-      icon: <PersonIcon fontSize="large" />,
-      color: "#A3C4F3", // blue
-    },
-    {
-      label: "Total Registrar",
-      value: registrarCount,
-      icon: <AdminPanelSettingsIcon fontSize="large" />, // new icon
-      color: "#FFD8A9", // light orange
-    },
-  ];
+
 
   const [date, setDate] = useState(new Date());
 
@@ -329,8 +467,13 @@ const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
           const found = res.data.find((item) => item.month === m);
           return found ? found : { month: m, total: 0 };
         });
+        setMonthlyApplicants(
+          filledData.map(item => ({
+            ...item,
+            month: String(item.month)   // 👈 force it into string
+          }))
+        );
 
-        setMonthlyApplicants(filledData);
       })
       .catch((err) =>
         console.error("Failed to fetch applicants per month", err)
@@ -393,7 +536,150 @@ const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
     }
   };
 
+  const [monthApplicants, setMonthApplicants] = useState(0);
 
+  useEffect(() => {
+    const fetchApplicantStats = async () => {
+      try {
+        const total = await axios.get(`${API_BASE_URL}/api/applicants/total`);
+        const week = await axios.get(`${API_BASE_URL}/api/applicants/week`);
+        const month = await axios.get(`${API_BASE_URL}/api/applicants/month`);
+        const year = await axios.get(`${API_BASE_URL}/api/applicants/year`);
+
+        setTotalApplicants(total.data.total);
+        setWeekApplicants(week.data.total);
+        setMonthApplicants(month.data.total);
+        setYearApplicants(year.data.total);
+      } catch (err) {
+        console.error("Failed to fetch applicant stats:", err);
+      }
+    };
+
+    fetchApplicantStats();
+  }, []);
+
+
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
+
+
+  useEffect(() => {
+    if (!selectedDepartmentId) return;
+
+    const fetchStats = async () => {
+      try {
+        const total = await axios.get(`/api/applicants/department/total?department_id=${selectedDepartmentId}`);
+        const week = await axios.get(`/api/applicants/department/week?department_id=${selectedDepartmentId}`);
+        const month = await axios.get(`/api/applicants/department/month?department_id=${selectedDepartmentId}`);
+        const year = await axios.get(`/api/applicants/department/year?department_id=${selectedDepartmentId}`);
+
+        setTotalApplicants(total.data.total);
+        setWeekApplicants(week.data.total);
+        setMonthApplicants(month.data.total);
+        setYearApplicants(year.data.total);
+      } catch (err) {
+        console.error("Failed to fetch:", err);
+      }
+    };
+
+    fetchStats();
+  }, [selectedDepartmentId]);
+
+  const [totalApplicants, setTotalApplicants] = useState(0);
+  const [weekApplicants, setWeekApplicants] = useState(0);
+  const [yearApplicants, setYearApplicants] = useState(0);
+
+  // Helper functions
+  const isThisWeek = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const firstDayOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+    const lastDayOfWeek = new Date(firstDayOfWeek);
+    lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
+    return date >= firstDayOfWeek && date <= lastDayOfWeek;
+  };
+
+  const isThisMonth = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  };
+
+  // Update totals whenever person or filters change
+  useEffect(() => {
+    const applicants = Array.isArray(person) ? person : [];
+
+    const filtered = applicants.filter((p) => {
+      const matchesDepartment =
+        !selectedDepartmentFilter || p.department_id === selectedDepartmentFilter;
+      const matchesProgram =
+        !selectedProgramFilter || p.program_code === selectedProgramFilter;
+      return matchesDepartment && matchesProgram;
+    });
+
+    setTotalApplicants(filtered.length);
+    setWeekApplicants(filtered.filter((p) => isThisWeek(p.date_applied)).length);
+    setYearApplicants(filtered.filter((p) => isThisMonth(p.date_applied)).length);
+  }, [person, selectedDepartmentFilter, selectedProgramFilter]);
+
+
+  useEffect(() => {
+    const fetchFilteredApplicants = async () => {
+      try {
+        const res = await axios.get("/api/applicants/filter", {
+          params: {
+            department_id: selectedDepartmentId || null,
+            program_code: selectedProgramFilter || null,
+          }
+        });
+        setApplicants(res.data);
+      } catch (err) {
+        console.error("Error filtering applicants", err);
+      }
+    };
+
+    fetchFilteredApplicants();
+  }, [selectedDepartmentId, selectedProgramFilter]);
+
+
+  const [pendingScheduleApplicants, setPendingScheduleApplicants] = useState([]);
+
+  useEffect(() => {
+    const fetchPendingSchedule = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/verified-ecat-applicants`);
+        setPendingScheduleApplicants(res.data);
+      } catch (err) {
+        console.error("Failed to fetch pending schedule applicants", err);
+        setPendingScheduleApplicants([]);
+      }
+    };
+
+    fetchPendingSchedule();
+  }, []);
+
+  const [scheduledCount, setScheduledCount] = useState(0);
+
+useEffect(() => {
+  axios.get("http://localhost:5000/api/get-scheduled-applicants")
+    .then(res => {
+      console.log("Scheduled applicants response:", res.data);
+      setScheduledCount(res.data.total); // Use the total
+    })
+    .catch(err => console.error("Axios error:", err));
+}, []);
+
+
+  const [completedExam, setCompletedExam] = React.useState(0);
+
+
+  useEffect(() => {
+    axios.get("http://localhost:5000/exam/completed-count") // backend endpoint
+      .then(res => {
+        // Assuming your backend returns { total: number }
+        setCompletedExam(res.data.total);
+      })
+      .catch(err => console.error("Error fetching completed exam count:", err));
+  }, []);
 
   if (loading || hasAccess === null)
     return <LoadingOverlay open={loading} message="Checking Access..." />;
@@ -401,14 +687,10 @@ const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
   if (!hasAccess) return <Unauthorized />;
 
 
-const EARIST_COLORS = {
-  maroon: "#800000",
-  cream: "#FFF4D6",
-  lightCream: "#FAF3E0",
-  gold: "#D4A017",
-  cardBg: "#FFFFFF",
-  softGray: "#f5f7fa"
-};
+  const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+
 
   return (
     <Box
@@ -540,7 +822,7 @@ const EARIST_COLORS = {
               height: 280,
               marginTop: 2.5,
               marginLeft: 1.1,
-        border: `2px solid ${borderColor}`,
+              border: `2px solid ${borderColor}`,
               borderRadius: 3,
               p: 2,
               boxShadow: 3,
@@ -565,11 +847,12 @@ const EARIST_COLORS = {
                     justifyContent: "space-between",
                     p: 1,
                     background: "#f5f7fa",
+                    border: "2px solid black",
                     borderRadius: 2,
                   }}
                 >
                   <Typography fontWeight={600}>Registered Applicants:</Typography>
-                  <Typography>240</Typography>
+                  <Typography>{totalApplicants}</Typography>
                 </Box>
               </Grid>
 
@@ -580,11 +863,13 @@ const EARIST_COLORS = {
                     justifyContent: "space-between",
                     p: 1,
                     background: "#f5f7fa",
+                    border: "2px solid black",
                     borderRadius: 2,
                   }}
                 >
                   <Typography fontWeight={600}>Scheduled Applicants:</Typography>
-                  <Typography>120</Typography>
+      <Typography>{scheduledCount}</Typography>
+
                 </Box>
               </Grid>
 
@@ -594,13 +879,16 @@ const EARIST_COLORS = {
                     display: "flex",
                     justifyContent: "space-between",
                     p: 1,
+                    border: "2px solid black",
                     background: "#f5f7fa",
                     borderRadius: 2,
                   }}
                 >
                   <Typography fontWeight={600}>Pending Schedule:</Typography>
-                  <Typography>120</Typography>
+                  <Typography>{pendingScheduleApplicants.length}</Typography>
+
                 </Box>
+
               </Grid>
 
               <Grid item xs={12}>
@@ -610,22 +898,24 @@ const EARIST_COLORS = {
                     justifyContent: "space-between",
                     p: 1,
                     background: "#f5f7fa",
+                    border: "2px solid black",
                     borderRadius: 2,
                   }}
                 >
                   <Typography fontWeight={600}>Completed Exam:</Typography>
-                  <Typography>13</Typography>
+                  <Typography>{completedExam}</Typography>
                 </Box>
+
               </Grid>
             </Grid>
           </Card>
           <Card
             sx={{
               width: 400,
-              height: 300,
+              height: 350,
               marginTop: 2.5,
               marginLeft: 1.1,
-         border: `2px solid ${borderColor}`,
+              border: `2px solid ${borderColor}`,
               borderRadius: 3,
               p: 2,
               boxShadow: 3,
@@ -656,15 +946,31 @@ const EARIST_COLORS = {
               <Button
                 variant="contained"
                 fullWidth
-                sx={{ textTransform: "none", py: 1.5, fontSize: "18px", background: mainButtonColor }}
+                sx={{ textTransform: "none", py: 1.5, fontSize: "18px", height: "60px", border: `2px solid ${borderColor}`, background: mainButtonColor }}
+                onClick={() => {
+                  window.location.href = "/applicant_list_admin";
+                }}
               >
-                Announcement
+                Applicant List
               </Button>
 
               <Button
                 variant="contained"
                 fullWidth
-                sx={{ textTransform: "none", py: 1.5, fontSize: "18px", background: mainButtonColor }}
+                sx={{ textTransform: "none", py: 1.5, fontSize: "18px", height: "60px", border: `2px solid ${borderColor}`, background: mainButtonColor }}
+                onClick={() => {
+                  window.location.href = "/announcement_for_admission";
+                }}
+              >
+                Announcement
+              </Button>
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ textTransform: "none", py: 1.5, fontSize: "18px", height: "60px", background: mainButtonColor, border: `2px solid ${borderColor}`, }}
+                onClick={() => {
+                  window.location.href = "/room_registration";
+                }}
               >
                 Room Registration
               </Button>
@@ -675,7 +981,7 @@ const EARIST_COLORS = {
         <Card
           sx={{
             width: 600,
-            height: 600,
+            height: 650,
             marginTop: 2.5,
             marginLeft: 2.1,
             p: 3,
@@ -684,7 +990,7 @@ const EARIST_COLORS = {
             display: "flex",
             flexDirection: "column",
             background: "#ffffff",
- border: `2px solid ${borderColor}`,
+            border: `2px solid ${borderColor}`,
           }}
         >
           {/* Header Row: Title + Filters */}
@@ -694,41 +1000,42 @@ const EARIST_COLORS = {
             </Typography>
 
             <Box sx={{ display: "flex", gap: 1 }}>
-              {/* Year Dropdown */}
-              <FormControl size="small" sx={{ width: 130 }}>
-                <InputLabel>Select Year</InputLabel>
+              <FormControl size="small" sx={{ width: "200px" }}>
+                <InputLabel id="school-year-label">School Years</InputLabel>
                 <Select
-                  label="Select Year"
-                  value={years}
-                  onChange={(e) => setYears(e.target.value)}
+                  labelId="school-year-label"
+                  value={selectedSchoolYear}
+                  onChange={handleSchoolYearChange}
+                  displayEmpty
                 >
-                  <MenuItem value="2023">2023</MenuItem>
-                  <MenuItem value="2024">2024</MenuItem>
-                  <MenuItem value="2025">2025</MenuItem>
-                  <MenuItem value="2026">2026</MenuItem>
+                  {schoolYears.length > 0 ? (
+                    schoolYears.map((sy) => (
+                      <MenuItem value={sy.year_id} key={sy.year_id}>
+                        {sy.current_year} - {sy.next_year}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>School Year is not found</MenuItem>
+                  )}
                 </Select>
               </FormControl>
-
-              {/* Month Dropdown */}
-              <FormControl size="small" sx={{ width: 130 }}>
-                <InputLabel>Select Month</InputLabel>
+              <FormControl size="small" sx={{ width: "200px" }}>
+                <InputLabel>School Semester</InputLabel>
                 <Select
-                  label="Select Month"
-                  value={months}
-                  onChange={(e) => setMonths(e.target.value)}
+                  label="School Semester"
+                  value={selectedSchoolSemester}
+                  onChange={handleSchoolSemesterChange}
+                  displayEmpty
                 >
-                  <MenuItem value="January">January</MenuItem>
-                  <MenuItem value="February">February</MenuItem>
-                  <MenuItem value="March">March</MenuItem>
-                  <MenuItem value="April">April</MenuItem>
-                  <MenuItem value="May">May</MenuItem>
-                  <MenuItem value="June">June</MenuItem>
-                  <MenuItem value="July">July</MenuItem>
-                  <MenuItem value="August">August</MenuItem>
-                  <MenuItem value="September">September</MenuItem>
-                  <MenuItem value="October">October</MenuItem>
-                  <MenuItem value="November">November</MenuItem>
-                  <MenuItem value="December">December</MenuItem>
+                  {semesters.length > 0 ? (
+                    semesters.map((sem) => (
+                      <MenuItem value={sem.semester_id} key={sem.semester_id}>
+                        {sem.semester_description}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>School Semester is not found</MenuItem>
+                  )}
                 </Select>
               </FormControl>
             </Box>
@@ -740,13 +1047,14 @@ const EARIST_COLORS = {
               <Box
                 sx={{
                   p: 2,
-                  background: "#f5f7fa",
+                  backgroundColor: "#fef9e1",
                   borderRadius: 2,
+                  border: "2px solid black",
                   textAlign: "center",
                   height: 90,
                 }}
               >
-                <Typography variant="h5" fontWeight="bold">521</Typography>
+                <Typography variant="h5" fontWeight="bold">{totalApplicants}</Typography>
                 <Typography fontSize={14}>Total Applicants</Typography>
               </Box>
             </Grid>
@@ -755,13 +1063,14 @@ const EARIST_COLORS = {
               <Box
                 sx={{
                   p: 2,
-                  background: "#f5f7fa",
+                  backgroundColor: "#fef9e1",
                   borderRadius: 2,
                   textAlign: "center",
+                  border: "2px solid black",
                   height: 90,
                 }}
               >
-                <Typography variant="h5" fontWeight="bold">73</Typography>
+                <Typography variant="h5" fontWeight="bold">{weekApplicants}</Typography>
                 <Typography fontSize={14}>This Week</Typography>
               </Box>
             </Grid>
@@ -770,13 +1079,14 @@ const EARIST_COLORS = {
               <Box
                 sx={{
                   p: 2,
-                  background: "#f5f7fa",
+                  backgroundColor: "#fef9e1",
+                  border: "2px solid black",
                   borderRadius: 2,
                   textAlign: "center",
                   height: 90,
                 }}
               >
-                <Typography variant="h5" fontWeight="bold">234</Typography>
+                <Typography variant="h5" fontWeight="bold">{monthApplicants}</Typography>
                 <Typography fontSize={14}>This Month</Typography>
               </Box>
             </Grid>
@@ -786,9 +1096,10 @@ const EARIST_COLORS = {
           <Typography
             variant="subtitle1"
             fontWeight={600}
-            sx={{ mb: 1 }}
+
+            sx={{ mb: 1, color: subtitleColor }}
           >
-            Applicants By Status:
+            Applicants Per Month:
           </Typography>
 
           {/* Bar Graph Placeholder */}
@@ -797,7 +1108,7 @@ const EARIST_COLORS = {
               flexGrow: 1,
               background: "#f1f3f4",
               borderRadius: 3,
-              border: "1px dashed #bfc4cc",
+              border: "2px solid black",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
@@ -805,7 +1116,46 @@ const EARIST_COLORS = {
               color: "#6c6c6c",
             }}
           >
-            BAR GRAPH HERE
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={monthlyApplicants}
+                margin={{ top: 20, right: 20, left: 0, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+
+                <XAxis
+                  dataKey="month"
+                  tickFormatter={(value) => {
+                    const [, m] = value.split("-");
+                    return MONTH_SHORT[Number(m) - 1];
+                  }}
+                />
+
+                <YAxis />
+
+                <Tooltip
+                  cursor={{ fill: "rgba(0,0,0,0.1)" }}
+                  formatter={(value) => [`${value} applicants`, "Total"]}
+                  labelFormatter={(label) => {
+                    const [year, m] = label.split("-");
+                    return `${MONTH_SHORT[Number(m) - 1]} ${year}`;
+                  }}
+                />
+
+                <Bar dataKey="total">
+                  {monthlyApplicants.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={mainButtonColor}
+                    />
+                  ))}
+
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+
+
+
           </Box>
         </Card>
 
@@ -936,7 +1286,7 @@ const EARIST_COLORS = {
                     );
 
                     return isHoliday ? (
-                      <Tooltip
+                      <MuiTooltip
                         key={`${i}-${j}`}
                         title={
                           <>
@@ -948,7 +1298,7 @@ const EARIST_COLORS = {
                         placement="top"
                       >
                         {dayCell}
-                      </Tooltip>
+                      </MuiTooltip>
                     ) : (
                       <React.Fragment key={`${i}-${j}`}>{dayCell}</React.Fragment>
                     );
@@ -961,7 +1311,7 @@ const EARIST_COLORS = {
           <Card
             sx={{
               width: 480,
-              height: 180,
+              height: 230,
               marginTop: 2.5,
               marginLeft: 2.1,
               p: 2,
@@ -969,31 +1319,52 @@ const EARIST_COLORS = {
               boxShadow: 3,
               background: "#ffffff",
               display: "flex",
-     border: `2px solid ${borderColor}`,
+              border: `2px solid ${borderColor}`,
               flexDirection: "column",
             }}
-          >
-            {/* Header: Title + Department Dropdown */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold" color={subtitleColor}>
-                Total Applicant Per Department
-              </Typography>
+          >  <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }} color={subtitleColor}>
+              Total Applicant Per Department
+            </Typography>
 
-              <FormControl size="small" sx={{ width: 160 }}>
-                <InputLabel>Select Department</InputLabel>
+            {/* Header: Title + Department Dropdown */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+
+
+              <FormControl size="small" sx={{ width: "400px" }}>
                 <Select
-                  label="Select Department"
-                  value={departments}
-                  onChange={(e) => setDepartments(e.target.value)}
+                  value={selectedDepartmentFilter}
+                  onChange={(e) => {
+                    const selectedDept = e.target.value;
+                    setSelectedDepartmentFilter(selectedDept);
+                    handleDepartmentChange(selectedDept);
+                  }}
+                  displayEmpty
                 >
-                  <MenuItem value="CAS">CAS</MenuItem>
-                  <MenuItem value="CEIS">CEIS</MenuItem>
-                  <MenuItem value="CBA">CBA</MenuItem>
-                  <MenuItem value="COED">COED</MenuItem>
-                  <MenuItem value="CIT">CIT</MenuItem>
-                  <MenuItem value="Architecture">Architecture</MenuItem>
+                  <MenuItem value="">Select College</MenuItem>
+                  {department.map((dep) => (
+                    <MenuItem key={dep.dprtmnt_id} value={dep.dprtmnt_name}>
+                      {dep.dprtmnt_name} ({dep.dprtmnt_code})
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
+
+
+              <FormControl size="small" sx={{ width: "350px" }}>
+                <Select
+                  value={selectedProgramFilter}
+                  onChange={(e) => setSelectedProgramFilter(e.target.value)}
+                  displayEmpty
+                >
+                  <MenuItem value="">All Programs</MenuItem>
+                  {curriculumOptions.map((prog) => (
+                    <MenuItem key={prog.curriculum_id} value={prog.program_code}>
+                      {prog.program_code} - {prog.program_description}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
             </Box>
 
             {/* Stats Boxes */}
@@ -1003,12 +1374,13 @@ const EARIST_COLORS = {
                   sx={{
                     p: 1,
                     borderRadius: 2,
-                    background: "#f5f7fa",
+                    background: "#FCBEBB",
                     textAlign: "center",
+                    border: "2px solid black",
                     height: 90,
                   }}
                 >
-                  <Typography variant="h6" fontWeight="bold">521</Typography>
+                  <Typography variant="h6" fontWeight="bold">{totalApplicants}</Typography>
                   <Typography fontSize={12}>Total Applicants</Typography>
                 </Box>
               </Grid>
@@ -1018,12 +1390,13 @@ const EARIST_COLORS = {
                   sx={{
                     p: 1,
                     borderRadius: 2,
-                    background: "#f5f7fa",
+                    border: "2px solid black",
+                    background: "#FCBEBB",
                     textAlign: "center",
                     height: 90,
                   }}
                 >
-                  <Typography variant="h6" fontWeight="bold">73</Typography>
+                  <Typography variant="h6" fontWeight="bold">{weekApplicants}</Typography>
                   <Typography fontSize={12}>This Week</Typography>
                 </Box>
               </Grid>
@@ -1033,12 +1406,13 @@ const EARIST_COLORS = {
                   sx={{
                     p: 1,
                     borderRadius: 2,
-                    background: "#f5f7fa",
+                    background: "#FCBEBB",
+                    border: "2px solid black",
                     textAlign: "center",
                     height: 90,
                   }}
                 >
-                  <Typography variant="h6" fontWeight="bold">234</Typography>
+                  <Typography variant="h6" fontWeight="bold">{yearApplicants}</Typography>
                   <Typography fontSize={12}>This Month</Typography>
                 </Box>
               </Grid>

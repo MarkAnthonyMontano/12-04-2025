@@ -2744,19 +2744,24 @@ app.get("/api/all-students", async (req, res) => {
 
 
 // 📌 Import Excel to person_status_table
-// 📌 Import Excel to person_status_table + log notifications
+// 📌 Import Excel to person_status_table + status + log notifications
 app.post("/api/qualifying_exam/import", async (req, res) => {
   try {
-
     const loggedInUserId = req.body.userID;
     const rows = Array.isArray(req.body.data) ? req.body.data : [];
-    if (rows.length === 0) return res.status(400).json({ success: false, error: "No rows found" });
+
+    if (rows.length === 0)
+      return res.status(400).json({ success: false, error: "No rows found" });
 
     const applicantNumbers = rows.map(r => r.applicant_number).filter(n => n);
-    if (!applicantNumbers.length) return res.status(400).json({ success: false, error: "No valid applicant numbers" });
+    if (!applicantNumbers.length)
+      return res.status(400).json({ success: false, error: "No valid applicant numbers" });
 
+    // 🔍 Get person_id using applicant number
     const [matches] = await db.query(
-      `SELECT person_id, applicant_number FROM applicant_numbering_table WHERE applicant_number IN (?)`,
+      `SELECT person_id, applicant_number 
+       FROM applicant_numbering_table 
+       WHERE applicant_number IN (?)`,
       [applicantNumbers]
     );
 
@@ -2764,6 +2769,7 @@ app.post("/api/qualifying_exam/import", async (req, res) => {
     matches.forEach(m => { applicantMap[m.applicant_number] = m.person_id; });
 
     const values = [];
+
     for (const row of rows) {
       const personId = applicantMap[row.applicant_number];
       if (!personId) continue;
@@ -2772,36 +2778,47 @@ app.post("/api/qualifying_exam/import", async (req, res) => {
       const qInterview = Number(row.qualifying_interview_score) || 0;
       const totalAve = Number(row.total_ave) || (qExam + qInterview) / 2;
 
-      values.push([personId, qExam, qInterview, totalAve]);
+      // ⭐ NEW: import status column
+      const status = row.status ? row.status.trim() : "Waiting List";
+
+      values.push([personId, qExam, qInterview, totalAve, status]);
     }
 
-    if (!values.length) return res.status(400).json({ success: false, error: "No valid data to import" });
+    if (!values.length)
+      return res.status(400).json({ success: false, error: "No valid data to import" });
 
+    // ⭐ NEW: Insert + update status also
     await db.query(
-      `INSERT INTO person_status_table (person_id, qualifying_result, interview_result, exam_result)
+      `INSERT INTO person_status_table 
+        (person_id, qualifying_result, interview_result, exam_result, status)
        VALUES ?
        ON DUPLICATE KEY UPDATE
          qualifying_result = VALUES(qualifying_result),
          interview_result = VALUES(interview_result),
-         exam_result = VALUES(exam_result)`,
+         exam_result = VALUES(exam_result),
+         status = VALUES(status)`,
       [values]
     );
 
+    // Update audit field
     await db.query("UPDATE admission_exam SET user = ?", [loggedInUserId]);
 
-    // ✅ Use user_accounts instead of prof_table
+    // Registrar Info
     const [registrarRows] = await db3.query(
       "SELECT last_name, first_name, middle_name, email, employee_id FROM user_accounts WHERE role = 'registrar' LIMIT 1"
     );
+
     const registrar = registrarRows[0];
     const registrarEmail = registrar?.email || "earistmis@gmail.com";
     const registrarFullName = registrar
       ? `${registrar.last_name}, ${registrar.first_name} ${registrar.middle_name || ""}`.trim()
       : "Registrar";
+
     const registrarDisplay = `REGISTRAR (${registrar?.employee_id || "N/A"}) - ${registrarFullName} - ${registrarEmail}`;
 
-    // ✅ Log notification
+    // Log notification
     const message = `📊 Bulk Qualifying/Interview Exam Scores uploaded by ${registrarDisplay}`;
+
     await db.query(
       "INSERT INTO notifications (type, message, applicant_number, actor_email, actor_name, timestamp) VALUES (?, ?, ?, ?, ?, NOW())",
       ["upload", message, null, registrarEmail, registrarFullName]
@@ -2817,6 +2834,7 @@ app.post("/api/qualifying_exam/import", async (req, res) => {
     });
 
     res.json({ success: true, message: "Excel imported successfully!" });
+
   } catch (err) {
     console.error("❌ Bulk import error:", err);
     res.status(500).json({ success: false, error: err.message });
@@ -5957,42 +5975,42 @@ WHERE proctor LIKE ?
     }
   });
 
-app.post("/exam/save", async (req, res) => {
-  try {
-    const {
-      applicant_number,
-      english,
-      science,
-      filipino,
-      math,
-      abstract,
-      final_rating,
-      status
-    } = req.body;
+  app.post("/exam/save", async (req, res) => {
+    try {
+      const {
+        applicant_number,
+        english,
+        science,
+        filipino,
+        math,
+        abstract,
+        final_rating,
+        status
+      } = req.body;
 
-    // 1️⃣ Find person_id
-    const [rows] = await db.query(
-      "SELECT person_id FROM applicant_numbering_table WHERE applicant_number = ?",
-      [applicant_number]
-    );
+      // 1️⃣ Find person_id
+      const [rows] = await db.query(
+        "SELECT person_id FROM applicant_numbering_table WHERE applicant_number = ?",
+        [applicant_number]
+      );
 
-    if (rows.length === 0) {
-      return res.status(400).json({ error: "Applicant number not found" });
-    }
+      if (rows.length === 0) {
+        return res.status(400).json({ error: "Applicant number not found" });
+      }
 
-    const personId = rows[0].person_id;
+      const personId = rows[0].person_id;
 
-    // 2️⃣ Load old exam data
-    const [oldRows] = await db.query(
-      "SELECT English, Science, Filipino, Math, Abstract, status FROM admission_exam WHERE person_id = ?",
-      [personId]
-    );
+      // 2️⃣ Load old exam data
+      const [oldRows] = await db.query(
+        "SELECT English, Science, Filipino, Math, Abstract, status FROM admission_exam WHERE person_id = ?",
+        [personId]
+      );
 
-    const oldData = oldRows[0] || null;
+      const oldData = oldRows[0] || null;
 
-    // 3️⃣ Insert or update exam results (NO user column)
-    await db.query(
-      `INSERT INTO admission_exam 
+      // 3️⃣ Insert or update exam results (NO user column)
+      await db.query(
+        `INSERT INTO admission_exam 
         (person_id, English, Science, Filipino, Math, Abstract, final_rating, status, date_created)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURDATE())
        ON DUPLICATE KEY UPDATE
@@ -6003,40 +6021,40 @@ app.post("/exam/save", async (req, res) => {
          Abstract = VALUES(Abstract),
          final_rating = VALUES(final_rating),
          status = VALUES(status)`,
-      [
-        personId,
-        english,
-        science,
-        filipino,
-        math,
-        abstract,
-        final_rating,
-        status === "" ? null : status
-      ]
-    );
+        [
+          personId,
+          english,
+          science,
+          filipino,
+          math,
+          abstract,
+          final_rating,
+          status === "" ? null : status
+        ]
+      );
 
-    // 4️⃣ Actor is always SYSTEM now (since no user field exists)
-    const actorEmail = "earistmis@gmail.com";
-    const actorName = "SYSTEM";
+      // 4️⃣ Actor is always SYSTEM now (since no user field exists)
+      const actorEmail = "earistmis@gmail.com";
+      const actorName = "SYSTEM";
 
-    // 5️⃣ Compare old vs new values → generate notifications
-    if (oldData) {
-      const subjects = [
-        { key: "English", label: "English", newVal: english },
-        { key: "Science", label: "Science", newVal: science },
-        { key: "Filipino", label: "Filipino", newVal: filipino },
-        { key: "Math", label: "Math", newVal: math },
-        { key: "Abstract", label: "Abstract", newVal: abstract }
-      ];
+      // 5️⃣ Compare old vs new values → generate notifications
+      if (oldData) {
+        const subjects = [
+          { key: "English", label: "English", newVal: english },
+          { key: "Science", label: "Science", newVal: science },
+          { key: "Filipino", label: "Filipino", newVal: filipino },
+          { key: "Math", label: "Math", newVal: math },
+          { key: "Abstract", label: "Abstract", newVal: abstract }
+        ];
 
-      for (const subj of subjects) {
-        const oldVal = oldData[subj.key];
+        for (const subj of subjects) {
+          const oldVal = oldData[subj.key];
 
-        if (oldVal != subj.newVal) {
-          const message = `📝 Entrance Exam updated (${subj.label}: ${oldVal ?? 0} → ${subj.newVal}) for Applicant #${applicant_number}`;
+          if (oldVal != subj.newVal) {
+            const message = `📝 Entrance Exam updated (${subj.label}: ${oldVal ?? 0} → ${subj.newVal}) for Applicant #${applicant_number}`;
 
-          await db.query(
-            `INSERT INTO notifications (type, message, applicant_number, actor_email, actor_name, timestamp)
+            await db.query(
+              `INSERT INTO notifications (type, message, applicant_number, actor_email, actor_name, timestamp)
              SELECT ?, ?, ?, ?, ?, NOW()
              FROM DUAL
              WHERE NOT EXISTS (
@@ -6045,28 +6063,28 @@ app.post("/exam/save", async (req, res) => {
                  AND message = ?
                  AND DATE(timestamp) = CURDATE()
              )`,
-            ["update", message, applicant_number, actorEmail, actorName, applicant_number, message]
-          );
+              ["update", message, applicant_number, actorEmail, actorName, applicant_number, message]
+            );
 
-          io.emit("notification", {
-            type: "update",
-            message,
-            applicant_number,
-            actor_email: actorEmail,
-            actor_name: actorName,
-            timestamp: new Date().toISOString(),
-          });
+            io.emit("notification", {
+              type: "update",
+              message,
+              applicant_number,
+              actor_email: actorEmail,
+              actor_name: actorName,
+              timestamp: new Date().toISOString(),
+            });
+          }
         }
       }
+
+      res.json({ success: true, message: "Exam data saved (with status)!" });
+
+    } catch (err) {
+      console.error("❌ Save error:", err);
+      res.status(500).json({ error: "Failed to save exam data" });
     }
-
-    res.json({ success: true, message: "Exam data saved (with status)!" });
-
-  } catch (err) {
-    console.error("❌ Save error:", err);
-    res.status(500).json({ error: "Failed to save exam data" });
-  }
-});
+  });
 
   // ======================= EMAIL NOTIFICATION LOGGER =======================
   app.post("/api/log-email", async (req, res) => {
@@ -6130,107 +6148,107 @@ app.post("/exam/save", async (req, res) => {
   });
 
 
-// 🔹 Bulk Excel Import Exam Scores
-app.post("/api/exam/import", upload.single("file"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+  // 🔹 Bulk Excel Import Exam Scores
+  app.post("/api/exam/import", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
 
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet);
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
 
-    const loggedInUserId = req.body.userID;
+      const loggedInUserId = req.body.userID;
 
-    // 1️⃣ Collect applicant numbers
-    const applicantNumbers = rows
-      .map(r => r["Applicant ID"] || r["applicant_number"])
-      .filter(n => n);
+      // 1️⃣ Collect applicant numbers
+      const applicantNumbers = rows
+        .map(r => r["Applicant ID"] || r["applicant_number"])
+        .filter(n => n);
 
-    if (applicantNumbers.length === 0) {
-      return res.status(400).json({ error: "No valid applicant numbers" });
-    }
+      if (applicantNumbers.length === 0) {
+        return res.status(400).json({ error: "No valid applicant numbers" });
+      }
 
-    // 2️⃣ Get person_id mappings
-    const [matches] = await db.query(
-      `SELECT person_id, applicant_number 
+      // 2️⃣ Get person_id mappings
+      const [matches] = await db.query(
+        `SELECT person_id, applicant_number 
        FROM applicant_numbering_table 
        WHERE applicant_number IN (?)`,
-      [applicantNumbers]
-    );
-
-    const applicantMap = {};
-    matches.forEach(m => {
-      applicantMap[m.applicant_number] = m.person_id;
-    });
-
-    // 3️⃣ Prepare bulk insert values
-    const values = [];
-    const now = new Date();
-
-    for (const row of rows) {
-      const applicantNumber = row["Applicant ID"] || row["applicant_number"];
-      const personId = applicantMap[applicantNumber];
-      if (!personId) continue;
-
-      const english = Number(row["English"] || 0);
-      const science = Number(row["Science"] || 0);
-      const filipino = Number(row["Filipino"] || 0);
-      const math = Number(row["Math"] || 0);
-      const abstract = Number(row["Abstract"] || 0);
-
-      const finalRating =
-        (english + science + filipino + math + abstract) / 5;
-
-      // Excel status field
-      let status = row["Status"]?.toUpperCase();
-      if (status !== "PASSED" && status !== "FAILED") status = null;
-
-      values.push([
-        personId,
-        english,
-        science,
-        filipino,
-        math,
-        abstract,
-        finalRating,
-        status,
-        loggedInUserId,
-        now,
-      ]);
-    }
-
-    if (values.length === 0) {
-      return res.status(400).json({ error: "No valid data to import" });
-    }
-
-    // 4️⃣ INSERT or UPDATE (NO UNIQUE KEY REQUIRED)
-    for (const v of values) {
-      const [
-        personId,
-        english,
-        science,
-        filipino,
-        math,
-        abstract,
-        finalRating,
-        status,
-        loggedInUserId,
-        now
-      ] = v;
-
-      // Check if record already exists
-      const [existing] = await db.query(
-        "SELECT id FROM admission_exam WHERE person_id = ? LIMIT 1",
-        [personId]
+        [applicantNumbers]
       );
 
-      if (existing.length > 0) {
-        // Update existing record
-        await db.query(
-          `UPDATE admission_exam SET 
+      const applicantMap = {};
+      matches.forEach(m => {
+        applicantMap[m.applicant_number] = m.person_id;
+      });
+
+      // 3️⃣ Prepare bulk insert values
+      const values = [];
+      const now = new Date();
+
+      for (const row of rows) {
+        const applicantNumber = row["Applicant ID"] || row["applicant_number"];
+        const personId = applicantMap[applicantNumber];
+        if (!personId) continue;
+
+        const english = Number(row["English"] || 0);
+        const science = Number(row["Science"] || 0);
+        const filipino = Number(row["Filipino"] || 0);
+        const math = Number(row["Math"] || 0);
+        const abstract = Number(row["Abstract"] || 0);
+
+        const finalRating =
+          (english + science + filipino + math + abstract) / 5;
+
+        // Excel status field
+        let status = row["Status"]?.toUpperCase();
+        if (status !== "PASSED" && status !== "FAILED") status = null;
+
+        values.push([
+          personId,
+          english,
+          science,
+          filipino,
+          math,
+          abstract,
+          finalRating,
+          status,
+          loggedInUserId,
+          now,
+        ]);
+      }
+
+      if (values.length === 0) {
+        return res.status(400).json({ error: "No valid data to import" });
+      }
+
+      // 4️⃣ INSERT or UPDATE (NO UNIQUE KEY REQUIRED)
+      for (const v of values) {
+        const [
+          personId,
+          english,
+          science,
+          filipino,
+          math,
+          abstract,
+          finalRating,
+          status,
+          loggedInUserId,
+          now
+        ] = v;
+
+        // Check if record already exists
+        const [existing] = await db.query(
+          "SELECT id FROM admission_exam WHERE person_id = ? LIMIT 1",
+          [personId]
+        );
+
+        if (existing.length > 0) {
+          // Update existing record
+          await db.query(
+            `UPDATE admission_exam SET 
             English = ?, 
             Science = ?, 
             Filipino = ?, 
@@ -6241,91 +6259,91 @@ app.post("/api/exam/import", upload.single("file"), async (req, res) => {
             user = ?, 
             date_created = ?
            WHERE person_id = ?`,
-          [
-            english,
-            science,
-            filipino,
-            math,
-            abstract,
-            finalRating,
-            status,
-            loggedInUserId,
-            now,
-            personId
-          ]
-        );
-      } else {
-        // Insert new record
-        await db.query(
-          `INSERT INTO admission_exam
+            [
+              english,
+              science,
+              filipino,
+              math,
+              abstract,
+              finalRating,
+              status,
+              loggedInUserId,
+              now,
+              personId
+            ]
+          );
+        } else {
+          // Insert new record
+          await db.query(
+            `INSERT INTO admission_exam
             (person_id, English, Science, Filipino, Math, Abstract, final_rating, status, user, date_created)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            personId,
-            english,
-            science,
-            filipino,
-            math,
-            abstract,
-            finalRating,
-            status,
-            loggedInUserId,
-            now
-          ]
-        );
+            [
+              personId,
+              english,
+              science,
+              filipino,
+              math,
+              abstract,
+              finalRating,
+              status,
+              loggedInUserId,
+              now
+            ]
+          );
+        }
       }
-    }
 
-    // 5️⃣ Actor info & notifications
-    let actorEmail = "earistmis@gmail.com";
-    let actorName = "SYSTEM";
+      // 5️⃣ Actor info & notifications
+      let actorEmail = "earistmis@gmail.com";
+      let actorName = "SYSTEM";
 
-    if (loggedInUserId) {
-      const [actorRows] = await db3.query(
-        "SELECT email, role, employee_id, last_name, first_name, middle_name FROM user_accounts WHERE person_id = ? LIMIT 1",
-        [loggedInUserId]
+      if (loggedInUserId) {
+        const [actorRows] = await db3.query(
+          "SELECT email, role, employee_id, last_name, first_name, middle_name FROM user_accounts WHERE person_id = ? LIMIT 1",
+          [loggedInUserId]
+        );
+
+        if (actorRows.length > 0) {
+          const u = actorRows[0];
+          const role = u.role?.toUpperCase() || "UNKNOWN";
+          const empId = u.employee_id || "";
+          const lname = u.last_name || "";
+          const fname = u.first_name || "";
+          const mname = u.middle_name || "";
+          const email = u.email || "";
+
+          actorEmail = email;
+          actorName = `${role} (${empId}) - ${lname}, ${fname} ${mname}`.trim();
+        }
+      }
+
+      const message = `📊 Bulk Entrance Exam Scores uploaded`;
+
+      await db.query(
+        "INSERT INTO notifications (type, message, applicant_number, actor_email, actor_name) VALUES (?, ?, ?, ?, ?)",
+        ["upload", message, null, actorEmail, actorName]
       );
 
-      if (actorRows.length > 0) {
-        const u = actorRows[0];
-        const role = u.role?.toUpperCase() || "UNKNOWN";
-        const empId = u.employee_id || "";
-        const lname = u.last_name || "";
-        const fname = u.first_name || "";
-        const mname = u.middle_name || "";
-        const email = u.email || "";
+      io.emit("notification", {
+        type: "upload",
+        message,
+        applicant_number: null,
+        actor_email: actorEmail,
+        actor_name: actorName,
+        timestamp: new Date().toISOString(),
+      });
 
-        actorEmail = email;
-        actorName = `${role} (${empId}) - ${lname}, ${fname} ${mname}`.trim();
-      }
+      res.json({
+        success: true,
+        message: "Excel imported successfully!"
+      });
+
+    } catch (err) {
+      console.error("❌ Excel import error:", err);
+      res.status(500).json({ error: "Failed to import Excel" });
     }
-
-    const message = `📊 Bulk Entrance Exam Scores uploaded`;
-
-    await db.query(
-      "INSERT INTO notifications (type, message, applicant_number, actor_email, actor_name) VALUES (?, ?, ?, ?, ?)",
-      ["upload", message, null, actorEmail, actorName]
-    );
-
-    io.emit("notification", {
-      type: "upload",
-      message,
-      applicant_number: null,
-      actor_email: actorEmail,
-      actor_name: actorName,
-      timestamp: new Date().toISOString(),
-    });
-
-    res.json({
-      success: true,
-      message: "Excel imported successfully!"
-    });
-
-  } catch (err) {
-    console.error("❌ Excel import error:", err);
-    res.status(500).json({ error: "Failed to import Excel" });
-  }
-});
+  });
 
 
 
@@ -7618,7 +7636,7 @@ io.on("connection", (socket) => {
         [user_person_id]
       );
 
-      let actorEmail = "system@localhost";
+      let actorEmail = "earistmis@gmail.com";
       let actorName = "SYSTEM";
 
       if (actorRows.length > 0) {
@@ -15982,40 +16000,93 @@ app.get("/api/:employeeID", async (req, res) => {
   }
 });
 
-
+// ---------------------- ALL FILTERING FOR ADMISSION DASHBOARD ---------------------- //
 app.get("/api/applicant-stats", async (req, res) => {
   try {
-    // TOTAL
-    const [totalRows] = await db.query(`
-      SELECT COUNT(*) AS total FROM person_table
-    `);
+    const {
+      gender,
+      department_id,
+      program_id,
+      school_year,
+      semester
+    } = req.query;
 
-    // GENDER (0 = Male, 1 = Female, NULL → Unknown)
+    // ---------------------------
+    // Build dynamic WHERE filters
+    // ---------------------------
+    let where = "WHERE 1=1";
+    const params = [];
+
+    if (gender !== undefined && gender !== "all") {
+      where += " AND pt.gender = ?";
+      params.push(gender);
+    }
+
+    if (program_id) {
+      where += " AND pt.program = ?";
+      params.push(program_id);
+    }
+
+    if (department_id) {
+      where += `
+        AND EXISTS (
+          SELECT 1 FROM program_table p
+          JOIN dprtmnt_curriculum_table dct
+            ON p.curriculum_id = dct.curriculum_id
+          WHERE p.curriculum_id = pt.program
+            AND dct.dprtmnt_id = ?
+        )
+      `;
+      params.push(department_id);
+    }
+
+    if (school_year) {
+      where += " AND YEAR(pt.created_at) = ?";
+      params.push(school_year);
+    }
+
+    if (semester) {
+      where += " AND pt.middle_code = ?";
+      params.push(semester);
+    }
+
+    // ---------------------------
+    // Fetch Total
+    // ---------------------------
+    const [totalRows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table pt
+      ${where}
+    `, params);
+
+    // ---------------------------
+    // Fetch Gender Counts
+    // ---------------------------
     const [rawGender] = await db.query(`
-      SELECT gender, COUNT(*) AS total
-      FROM person_table
-      GROUP BY gender
-    `);
+      SELECT pt.gender, COUNT(*) AS total
+      FROM person_table pt
+      ${where}
+      GROUP BY pt.gender
+    `, params);
 
     const genderCounts = rawGender.map(row => ({
-      gender:
-        row.gender === 0 ? "Male" :
-          row.gender === 1 ? "Female" :
-            "Unknown",
+      gender: row.gender === 0 ? "Male" :
+        row.gender === 1 ? "Female" : "Unknown",
       total: row.total
     }));
 
-    // TERMS OF AGREEMENT
+    // ---------------------------
+    // Terms Of Agreement
+    // ---------------------------
     const [agreementRows] = await db.query(`
-      SELECT 
-        COALESCE(termsOfAgreement, 0) AS termsOfAgreement,
-        COUNT(*) AS total
-      FROM person_table
-      GROUP BY COALESCE(termsOfAgreement, 0)
-    `);
+      SELECT COALESCE(pt.termsOfAgreement,0) AS status, COUNT(*) AS total
+      FROM person_table pt
+      ${where}
+      GROUP BY COALESCE(pt.termsOfAgreement,0)
+    `, params);
 
     res.json({
-      totalApplicants: totalRows[0]?.total || 0,
+      totalApplicants: totalRows[0].total,
       genderCounts,
       statusCounts: agreementRows
     });
@@ -16025,6 +16096,7 @@ app.get("/api/applicant-stats", async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 });
+
 
 app.get("/api/applicants-per-month", async (req, res) => {
   try {
@@ -16045,6 +16117,226 @@ app.get("/api/applicants-per-month", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
+app.get("/api/applicants/total", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table
+      WHERE termsOfAgreement = 1
+    `);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/applicants/week", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table
+      WHERE termsOfAgreement = 1
+        AND YEARWEEK(created_at, 1) = YEARWEEK(NOW(), 1)
+    `);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/applicants/month", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table
+      WHERE termsOfAgreement = 1
+        AND YEAR(created_at) = YEAR(NOW())
+        AND MONTH(created_at) = MONTH(NOW())
+    `);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/applicants/year", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table
+      WHERE termsOfAgreement = 1
+        AND YEAR(created_at) = YEAR(NOW())
+    `);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/applicants/department/total", async (req, res) => {
+  const { department_id } = req.query;
+
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table pt
+      JOIN program_table prog 
+        ON pt.program = prog.curriculum_id
+      JOIN dprtmnt_curriculum_table dct
+        ON prog.curriculum_id = dct.curriculum_id
+      WHERE pt.termsOfAgreement = 1
+        AND dct.dprtmnt_id = ?
+    `, [department_id]);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/applicants/department/week", async (req, res) => {
+  const { department_id } = req.query;
+
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table pt
+      JOIN program_table prog 
+        ON pt.program = prog.curriculum_id
+      JOIN dprtmnt_curriculum_table dct
+        ON prog.curriculum_id = dct.curriculum_id
+      WHERE pt.termsOfAgreement = 1
+        AND dct.dprtmnt_id = ?
+        AND YEARWEEK(pt.created_at, 1) = YEARWEEK(NOW(), 1)
+    `, [department_id]);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/applicants/department/month", async (req, res) => {
+  const { department_id } = req.query;
+
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table pt
+      JOIN program_table prog 
+        ON pt.program = prog.curriculum_id
+      JOIN dprtmnt_curriculum_table dct
+        ON prog.curriculum_id = dct.curriculum_id
+      WHERE pt.termsOfAgreement = 1
+        AND dct.dprtmnt_id = ?
+        AND YEAR(pt.created_at) = YEAR(NOW())
+        AND MONTH(pt.created_at) = MONTH(NOW())
+    `, [department_id]);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.get("/api/applicants/department/year", async (req, res) => {
+  const { department_id } = req.query;
+
+  try {
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM person_table pt
+      JOIN program_table prog 
+        ON pt.program = prog.curriculum_id
+      JOIN dprtmnt_curriculum_table dct
+        ON prog.curriculum_id = dct.curriculum_id
+      WHERE pt.termsOfAgreement = 1
+        AND dct.dprtmnt_id = ?
+        AND YEAR(pt.created_at) = YEAR(NOW())
+    `, [department_id]);
+
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/applicants/filter", async (req, res) => {
+  let { department_id, program_code } = req.query;
+
+  // Normalize empty strings to null
+  if (!department_id) department_id = null;
+  if (!program_code) program_code = null;
+
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        p.*,
+        ct.curriculum_id,
+        pt.program_code,
+        pt.program_description,
+        dc.dprtmnt_id
+      FROM person_table p
+      LEFT JOIN db3.curriculum_table ct 
+        ON p.program = ct.curriculum_id
+      LEFT JOIN db3.program_table pt 
+        ON ct.program_id = pt.program_id
+      LEFT JOIN db3.dprtmnt_curriculum_table dc 
+        ON ct.curriculum_id = dc.curriculum_id
+      WHERE 
+        (${department_id} IS NULL OR dc.dprtmnt_id = ?)
+        AND (${program_code} IS NULL OR pt.program_code = ?)
+    `, [department_id, program_code]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Filter applicants failed:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// backend: server.js or routes file
+app.get("/api/get-scheduled-applicants", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT applicant_id, schedule_id, email_sent
+      FROM exam_applicants
+      WHERE schedule_id IS NOT NULL
+        AND email_sent = 1
+    `);
+
+    console.log("Scheduled applicants:", rows); // should log 1 row
+    res.json({ total: rows.length, data: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+app.get("/exam/completed-count", async (req, res) => {
+  try {
+    const [rows] = await db.query(`SELECT COUNT(*) AS total FROM admission_exam`);
+    console.log("Exam count from DB:", rows[0].total); // Debug
+
+    res.json({ total: rows[0].total });
+  } catch (err) {
+    console.error("Error fetching exam count:", err);
+    res.status(500).send("Server error");
+  }
+});
+
+
+
+// ---------------------- ALL FILTERING FOR ADMISSION DASHBOARD ---------------------- //
 
 
 const PORT = process.env.WEB_PORT || 5000;

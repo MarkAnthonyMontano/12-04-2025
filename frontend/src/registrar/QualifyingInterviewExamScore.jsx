@@ -845,6 +845,11 @@ th, td {
                     total_ave:
                         Number(row["Total Ave"]) ||
                         (Number(row["Qualifying Exam Score"]) + Number(row["Qualifying Interview Score"])) / 2,
+
+                    // ⭐ NEW: Status Column from Excel
+                    status: row["Status"]
+                        ? String(row["Status"]).trim()
+                        : "Waiting List"
                 }));
 
             if (sheet.length === 0) {
@@ -852,19 +857,31 @@ th, td {
                 return;
             }
 
-            const res = await axios.post(`${API_BASE_URL}/api/qualifying_exam/import`, {
-                userID,
-                data: sheet
-            }, {
-                headers: { "Content-Type": "application/json" },
+            const res = await axios.post(
+                `${API_BASE_URL}/api/qualifying_exam/import`,
+                {
+                    userID,
+                    data: sheet
+                },
+                {
+                    headers: { "Content-Type": "application/json" },
+                }
+            );
+
+            setSnack({
+                open: true,
+                message: res.data.message || "Import successful!",
+                severity: "success"
             });
 
-            setSnack({ open: true, message: res.data.message || "Import successful!", severity: "success" });
-
-            fetchApplicants(); // ✅ refresh instantly
+            fetchApplicants(); // refresh UI
         } catch (err) {
             console.error("❌ Import error:", err.response?.data || err.message);
-            setSnack({ open: true, message: "Import failed: " + (err.response?.data?.error || err.message), severity: "error" });
+            setSnack({
+                open: true,
+                message: "Import failed: " + (err.response?.data?.error || err.message),
+                severity: "error"
+            });
         }
     };
 
