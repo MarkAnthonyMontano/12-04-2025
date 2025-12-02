@@ -17,14 +17,14 @@ const http = require("http").createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(http, {
   cors: {
-    origin: ["http://localhost:5173", "http://192.168.1.3:5173"],
+    origin: ["http://localhost:5173", "http://192.168.50.2:5173"],
     methods: ["GET", "POST"]
   }
 });
 
 app.use(express.json());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://192.168.1.3:5173"],  // ✅ Explicitly allow Vite dev server
+  origin: ["http://localhost:5173", "http://192.168.50.2:5173"],  // ✅ Explicitly allow Vite dev server
   credentials: true                  // ✅ Allow credentials (cookies, auth)
 }));
 
@@ -4108,136 +4108,6 @@ app.post("/api/update-requirement", async (req, res) => {
 
 
 
-/*---------------------------  ENROLLMENT -----------------------*/
-
-// LOGIN PANEL (UPDATED!)
-// app.post("/login", async (req, res) => {
-//   const { email, password } = req.body;
-
-//   if (!email || !password) {
-//     return res.status(400).json({ message: "Email and password are required" });
-//   }
-
-//   try {
-//     let user, token, mappings = [];
-
-//     let [rows] = await db3.query(
-//       "SELECT * FROM user_accounts WHERE email = ? AND role = 'superadmin'",
-//       [email]
-//     );
-//     if (rows.length > 0) {
-//       user = rows[0];
-//       const isMatch = await bcrypt.compare(password, user.password);
-//       if (isMatch) {
-//         token = webtoken.sign(
-//           {
-//             id: user.id,
-//             person_id: user.person_id,
-//             email: user.email,
-//             role: user.role
-//           },
-//           process.env.JWT_SECRET,
-//           { expiresIn: "1h" }
-//         );
-//         return res.status(200).json({
-//           message: "Superadmin login successful",
-//           token,
-//           user: {
-//             person_id: user.person_id,
-//             email: user.email,
-//             role: user.role
-//           }
-//         });
-//       }
-//     }
-
-//     const facultySQL = `
-//       SELECT prof_table.*, time_table.*
-//       FROM prof_table
-//       LEFT JOIN time_table ON prof_table.prof_id = time_table.professor_id
-//       WHERE prof_table.email = ? AND prof_table.role = 'faculty'
-//     `;
-//     const [facultyRows] = await db3.query(facultySQL, [email]);
-
-//     if (facultyRows.length > 0) {
-//       user = facultyRows[0];
-//       const isMatch = await bcrypt.compare(password, user.password);
-//       if (isMatch) {
-//         token = webtoken.sign(
-//           {
-//             prof_id: user.prof_id,
-//             fname: user.fname,
-//             mname: user.mname,
-//             lname: user.lname,
-//             email: user.email,
-//             role: user.role,
-//             profile_img: user.profile_image,
-//             school_year_id: user.school_year_id
-//           },
-//           process.env.JWT_SECRET,
-//           { expiresIn: "1h" }
-//         );
-
-//         mappings = facultyRows.map(row => ({
-//           department_section_id: row.department_section_id,
-//           subject_id: row.course_id
-//         }));
-
-//         return res.status(200).json({
-//           message: "Faculty login successful",
-//           token,
-//           prof_id: user.prof_id,
-//           fname: user.fname,
-//           mname: user.mname,
-//           lname: user.lname,
-//           email: user.email,
-//           role: user.role,
-//           profile_img: user.profile_image,
-//           subject_section_mappings: mappings,
-//           school_year_id: user.school_year_id
-//         });
-//       }
-//     }
-
-//     [rows] = await db.query(
-//       "SELECT * FROM user_accounts WHERE email = ? AND role = 'applicant'",
-//       [email]
-//     );
-//     if (rows.length > 0) {
-//       user = rows[0];
-//       const isMatch = await bcrypt.compare(password, user.password);
-//       if (isMatch) {
-//         token = webtoken.sign(
-//           {
-//             id: user.id,
-//             person_id: user.person_id,
-//             email: user.email,
-//             role: user.role
-//           },
-//           process.env.JWT_SECRET,
-//           { expiresIn: "1h" }
-//         );
-
-//         return res.status(200).json({
-//           message: "Applicant login successful",
-//           token,
-//           user: {
-//             person_id: user.person_id,
-//             email: user.email,
-//             role: user.role
-//           }
-//         });
-//       }
-//     }
-
-//     // If none matched or password was incorrect
-//     return res.status(400).json({ message: "Invalid email or password" });
-
-//   } catch (err) {
-//     console.error("Login error:", err);
-//     return res.status(500).json({ message: "Server error", error: err.message });
-//   }
-// });
 // ----------------- GLOBAL STORES -----------------
 let otpStore = {};
 // Structure: { email: { otp, expiresAt, cooldownUntil } }
