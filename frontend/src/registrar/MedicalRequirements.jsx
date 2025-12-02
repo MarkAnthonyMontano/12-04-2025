@@ -694,7 +694,7 @@ const MedicalRequirements = () => {
                                          onBlur={async () => {
                                              const finalRemark = (remarksMap[uploadId] || "").trim();
              
-                                             await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                                             await axios.put(`${API_BASE_URL}uploads/remarks/${uploadId}`, {
                                                  remarks: finalRemark,
                                                  status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                                                  user_id: userID,
@@ -711,7 +711,7 @@ const MedicalRequirements = () => {
                                                  e.preventDefault();
                                                  const finalRemark = (remarksMap[uploadId] || "").trim();
              
-                                                 await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                                                 await axios.put(`${API_BASE_URL}uploads/remarks/${uploadId}`, {
                                                      remarks: finalRemark,
                                                      status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                                                      user_id: userID,

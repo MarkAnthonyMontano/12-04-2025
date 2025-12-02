@@ -26,7 +26,7 @@ import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import KeyIcon from "@mui/icons-material/Key";
 import CampaignIcon from '@mui/icons-material/Campaign';
-
+import ScoreIcon from '@mui/icons-material/Score';
 import API_BASE_URL from "../apiConfig";
 const AdminDashboard5 = () => {
 
@@ -75,7 +75,7 @@ const AdminDashboard5 = () => {
         { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
-        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <ScoreIcon fontSize="large" /> },
 
   ];
   const [currentStep, setCurrentStep] = useState(1);

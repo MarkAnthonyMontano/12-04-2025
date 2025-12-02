@@ -25,7 +25,7 @@ import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import KeyIcon from "@mui/icons-material/Key";
 import CampaignIcon from '@mui/icons-material/Campaign';
-
+import ScoreIcon from '@mui/icons-material/Score';
 import ExamPermit from "../applicant/ExamPermit";
 import API_BASE_URL from "../apiConfig";
 const AdminDashboard2 = () => {
@@ -75,7 +75,7 @@ const AdminDashboard2 = () => {
     { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
     { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
     { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
-    { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
+    { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <ScoreIcon fontSize="large" /> },
 
 
   ];
@@ -1965,21 +1965,22 @@ const AdminDashboard2 = () => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                 >
-                  <MenuItem value=""><em>Select Guardian</em></MenuItem>
-                  <MenuItem value="Father">Father</MenuItem>
-                  <MenuItem value="Mother">Mother</MenuItem>
-                  <MenuItem value="Brother/Sister">Brother/Sister</MenuItem>
-                  <MenuItem value="GrandMother">GrandMother</MenuItem>
-                  <MenuItem value="GrandFather">GrandFather</MenuItem>
-                  <MenuItem value="Uncle">Uncle</MenuItem>
-                  <MenuItem value="StepFather">Stepfather</MenuItem>
-                  <MenuItem value="StepMother">Stepmother</MenuItem>
-                  <MenuItem value="Cousin">Cousin</MenuItem>
-                  <MenuItem value="Father in Law">Father-in-law</MenuItem>
-                  <MenuItem value="Mother in Law">Mother-in-law</MenuItem>
-                  <MenuItem value="Sister in Law">Sister-in-law</MenuItem>
-                  <MenuItem value="Spouse">Spouse</MenuItem>
-                  <MenuItem value="Others">Others</MenuItem>
+                    <MenuItem value=""><em>Select Guardian</em></MenuItem>
+                                   <MenuItem value="Father">Father</MenuItem>
+                                   <MenuItem value="Mother">Mother</MenuItem>
+                                   <MenuItem value="Brother/Sister">Brother/Sister</MenuItem>
+                                   <MenuItem value="Uncle">Uncle</MenuItem>
+                                   <MenuItem value="Aunt">Aunt</MenuItem>
+                                   <MenuItem value="StepFather">Stepfather</MenuItem>
+                                   <MenuItem value="StepMother">Stepmother</MenuItem>
+                                   <MenuItem value="Cousin">Cousin</MenuItem>
+                                   <MenuItem value="Father in Law">Father-in-law</MenuItem>
+                                   <MenuItem value="Mother in Law">Mother-in-law</MenuItem>
+                                   <MenuItem value="Sister in Law">Sister-in-law</MenuItem>
+                                   <MenuItem value="GrandMother">GrandMother</MenuItem>
+                                   <MenuItem value="GrandFather">GrandFather</MenuItem>
+                                   <MenuItem value="Spouse">Spouse</MenuItem>
+                                   <MenuItem value="Others">Others</MenuItem>
                 </Select>
 
               </FormControl>

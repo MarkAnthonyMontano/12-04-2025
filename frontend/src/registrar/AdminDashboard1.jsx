@@ -36,7 +36,7 @@ import KeyIcon from "@mui/icons-material/Key";
 import CampaignIcon from '@mui/icons-material/Campaign';
 import API_BASE_URL from "../apiConfig";
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-
+import ScoreIcon from '@mui/icons-material/Score';
 
 const AdminDashboard1 = () => {
 
@@ -85,7 +85,7 @@ const AdminDashboard1 = () => {
     { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
     { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
     { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
-    { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
+    { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <ScoreIcon fontSize="large" /> },
 
   ];
 
@@ -1537,11 +1537,18 @@ const AdminDashboard1 = () => {
 
             <div className="flex items-center mb-4 gap-4">
               <label className="w-40 font-medium">Campus:</label>
-              <FormControl fullWidth size="small" required error={!!errors.campus} className="mb-4">
+
+              <FormControl
+                fullWidth
+                size="small"
+                required
+                error={!!errors.campus}
+                className="mb-4"
+              >
                 <InputLabel id="campus-label">Campus (Manila/Cavite)</InputLabel>
 
                 <Select
-                  readOnly
+                  disabled            // ← FIX: use disabled instead of readOnly
                   labelId="campus-label"
                   id="campus-select"
                   name="campus"
@@ -1562,9 +1569,11 @@ const AdminDashboard1 = () => {
                   }}
                   onBlur={handleBlur}
                 >
-                  <MenuItem value=""><em>Select Campus</em></MenuItem>
-                  <MenuItem value="0">MANILA</MenuItem>
-                  <MenuItem value="1">CAVITE</MenuItem>
+                  <MenuItem value="">
+                    <em>Select Campus</em>
+                  </MenuItem>
+                  <MenuItem value="1">MANILA</MenuItem>
+                  <MenuItem value="2">CAVITE</MenuItem>
                 </Select>
 
                 {errors.campus && (
@@ -1572,6 +1581,7 @@ const AdminDashboard1 = () => {
                 )}
               </FormControl>
             </div>
+
 
 
             <div className="flex items-center mb-4 gap-4">

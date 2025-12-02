@@ -660,7 +660,7 @@ const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
   const [scheduledCount, setScheduledCount] = useState(0);
 
 useEffect(() => {
-  axios.get("http://localhost:5000/api/get-scheduled-applicants")
+  axios.get(`http://localhost:5000/api/get-scheduled-applicants`)
     .then(res => {
       console.log("Scheduled applicants response:", res.data);
       setScheduledCount(res.data.total); // Use the total
@@ -673,7 +673,7 @@ useEffect(() => {
 
 
   useEffect(() => {
-    axios.get("http://localhost:5000/exam/completed-count") // backend endpoint
+    axios.get(`http://localhost:5000/exam/completed-count`) // backend endpoint
       .then(res => {
         // Assuming your backend returns { total: number }
         setCompletedExam(res.data.total);

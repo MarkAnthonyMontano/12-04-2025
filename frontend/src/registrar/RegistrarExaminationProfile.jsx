@@ -34,7 +34,7 @@ import LoadingOverlay from "../components/LoadingOverlay";
 import SearchIcon from "@mui/icons-material/Search";
 import KeyIcon from "@mui/icons-material/Key";
 import CampaignIcon from '@mui/icons-material/Campaign';
-
+import ScoreIcon from '@mui/icons-material/Score';
 
 const ExaminationProfile = ({ personId }) => {
     const settings = useContext(SettingsContext);
@@ -106,7 +106,7 @@ const ExaminationProfile = ({ personId }) => {
         { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
-        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <ScoreIcon fontSize="large" /> },
 
 
     ];
@@ -121,7 +121,7 @@ const ExaminationProfile = ({ personId }) => {
 
         // fetch info of that person
         axios
-            .get(`http://localhost:5000/api/person_with_applicant/${personIdFromUrl}`)
+            .get(`h${API_BASE_URL}/api/person_with_applicant/${personIdFromUrl}`)
             .then((res) => {
                 if (res.data?.applicant_number) {
 
@@ -1251,7 +1251,7 @@ const ExaminationProfile = ({ personId }) => {
                                                         }}
                                                     >
                                                         <QRCodeSVG
-                                                            value={`http://localhost:5173/examination_profile/${selectedPerson.applicant_number}`}
+                                                            value={`${API_BASE_URL}/examination_profile/${selectedPerson.applicant_number}`}
                                                             size={150}
                                                             level="H"
                                                         />

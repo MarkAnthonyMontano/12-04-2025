@@ -13,6 +13,7 @@ const QRCode = require("qrcode");
 require("dotenv").config();
 const app = express();
 const http = require("http").createServer(app);
+
 const { Server } = require("socket.io");
 const io = new Server(http, {
   cors: {
@@ -20,6 +21,8 @@ const io = new Server(http, {
     methods: ["GET", "POST"]
   }
 });
+
+
 
 app.use(express.json());
 app.use(cors({
@@ -448,12 +451,11 @@ app.post(
 app.post("/register", async (req, res) => {
   const { email, password, campus, otp } = req.body;
 
-  // 1️⃣ Required fields
   if (!email || !password) {
     return res.json({ success: false, message: "Please fill up all required fields" });
   }
 
-  // ⭐⭐⭐ OTP VALIDATION INSERTED HERE ⭐⭐⭐
+  // ⭐⭐⭐ OTP VALIDATION ⭐⭐⭐
   const stored = otpStore[email];
   const now = Date.now();
 
@@ -471,9 +473,8 @@ app.post("/register", async (req, res) => {
   }
 
   delete otpStore[email];
-  // ⭐⭐⭐ END OF INSERT ⭐⭐⭐
+  // ⭐⭐⭐ END OTP ⭐⭐⭐
 
-  // 2️⃣ Gmail-only restriction
   if (!email.toLowerCase().endsWith("@gmail.com")) {
     return res.status(400).json({
       success: false,
@@ -504,17 +505,25 @@ app.post("/register", async (req, res) => {
       ? campus.trim()
       : `${companyName} - Main`;
 
+    // ⭐⭐⭐ FIX: STORE EMAIL INTO person_table.emailAddress ⭐⭐⭐
     const [personResult] = await db.query(
-      "INSERT INTO person_table (campus) VALUES (?)",
-      [campusValue]
+      `INSERT INTO person_table (campus, emailAddress, termsOfAgreement, current_step)
+       VALUES (?, ?, 1, 1)`,
+      [campusValue, email.trim().toLowerCase()]
     );
+
     person_id = personResult.insertId;
 
+    // Insert account
     await db.query(
-      "INSERT INTO user_accounts (person_id, email, password, role) VALUES (?, ?, ?, 'applicant')",
+      `INSERT INTO user_accounts (person_id, email, password, role)
+       VALUES (?, ?, ?, 'applicant')`,
       [person_id, email.trim().toLowerCase(), hashedPassword]
     );
 
+    // ------------------
+    // Applicant Numbering
+    // ------------------
     const [activeYearResult] = await db3.query(`
       SELECT yt.year_description, st.semester_code
       FROM active_school_year_table sy
@@ -543,6 +552,7 @@ app.post("/register", async (req, res) => {
       [applicant_number, person_id]
     );
 
+    // QR Codes
     const qrData = `http://localhost:5173/examination_profile/${applicant_number}`;
     const qrData2 = `http://localhost:5173/applicant_profile/${applicant_number}`;
     const qrFilename = `${applicant_number}_qrcode.png`;
@@ -568,13 +578,14 @@ app.post("/register", async (req, res) => {
     await db.query(
       `INSERT INTO person_status_table 
        (person_id, applicant_id, exam_status, requirements, residency, student_registration_status, exam_result, hs_ave, qualifying_result, interview_result)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [person_id, applicant_number, 0, 0, 0, 0, 0, 0, 0, 0]
+       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0)`,
+      [person_id, applicant_number]
     );
 
     await db.query(
-      "INSERT INTO interview_applicants (schedule_id, applicant_id, email_sent, status) VALUES (?, ?, ?, ?)",
-      [null, applicant_number, 0, "Waiting List"]
+      `INSERT INTO interview_applicants (schedule_id, applicant_id, email_sent, status)
+       VALUES (?, ?, 0, 'Waiting List')`,
+      [null, applicant_number]
     );
 
     res.status(201).json({
@@ -582,7 +593,6 @@ app.post("/register", async (req, res) => {
       message: "Registered Successfully",
       person_id,
       applicant_number,
-      qr_code: qrFilename,
       campus: campusValue,
     });
 
@@ -597,6 +607,7 @@ app.post("/register", async (req, res) => {
     });
   }
 });
+
 
 const ROLE_PAGE_ACCESS = {
   admission: [103, 92, 96, 73, 1, 2, 3, 4, 5, 7, 8, 9, 11, 33, 48, 52, 61, 66, 98],
@@ -5849,6 +5860,7 @@ WHERE proctor LIKE ?
     }
   });
 
+  
   app.post("/exam/save", async (req, res) => {
     try {
       const {
@@ -5959,6 +5971,7 @@ WHERE proctor LIKE ?
       res.status(500).json({ error: "Failed to save exam data" });
     }
   });
+
 
   // ======================= EMAIL NOTIFICATION LOGGER =======================
   app.post("/api/log-email", async (req, res) => {
@@ -8107,11 +8120,21 @@ app.put("/update_curriculum/:id", async (req, res) => {
 });
 
 
-
 // --------------------------------- COURSE PANEL -------------------------------- //
 
+// ADD COURSE
 app.post("/adding_course", async (req, res) => {
-  const { course_code, course_description, course_unit, lab_unit, lec_value, lab_value } = req.body;
+  const {
+    course_code,
+    course_description,
+    course_unit,
+    lab_unit,
+    lec_value,
+    lab_value,
+    prereq,
+    iscomputer_lab,
+    isnon_computer_lab
+  } = req.body;
 
   try {
     const normalized_code = course_code.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
@@ -8122,12 +8145,24 @@ app.post("/adding_course", async (req, res) => {
     );
 
     if (rows.length > 0) {
-      return res.status(400).json({ message: "The course is already exists" });
+      return res.status(400).json({ message: "The course already exists" });
     }
 
     await db3.query(
-      "INSERT INTO course_table (course_code, course_description, course_unit, lab_unit, lec_value, lab_value) VALUES (?, ?, ?, ?, ?, ?)",
-      [course_code, course_description, course_unit, lab_unit, lec_value, lab_value]
+      `INSERT INTO course_table 
+      (course_code, course_description, course_unit, lab_unit, lec_value, lab_value, prereq, iscomputer_lab, isnon_computer_lab)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        course_code,
+        course_description,
+        course_unit,
+        lab_unit,
+        lec_value,
+        lab_value,
+        prereq || null,
+        iscomputer_lab || 0,
+        isnon_computer_lab || 0
+      ]
     );
 
     res.status(200).json({ message: "✅ Course added successfully" });
@@ -8139,9 +8174,22 @@ app.post("/adding_course", async (req, res) => {
 });
 
 
+// UPDATE COURSE
 app.put("/update_course/:id", async (req, res) => {
   const { id } = req.params;
-  const { course_code, course_description, course_unit, lab_unit, lec_value, lab_value } = req.body;
+
+  const {
+    course_code,
+    course_description,
+    course_unit,
+    lab_unit,
+    lec_value,
+    lab_value,
+    prereq,
+    iscomputer_lab,
+    isnon_computer_lab
+  } = req.body;
+
   try {
     const normalized_code = course_code.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 
@@ -8151,17 +8199,41 @@ app.put("/update_course/:id", async (req, res) => {
     );
 
     if (rows.length > 0) {
-      return res.status(400).json({ message: "The course is already exists" });
+      return res.status(400).json({ message: "The course already exists" });
     }
 
     const [result] = await db3.query(
-      "UPDATE course_table SET course_code=?, course_description=?, course_unit=?, lab_unit=?, lec_value = ?, lab_value = ? WHERE course_id=?",
-      [course_code, course_description, course_unit, lab_unit, lec_value, lab_value, id]
+      `UPDATE course_table SET 
+        course_code = ?, 
+        course_description = ?, 
+        course_unit = ?, 
+        lab_unit = ?, 
+        lec_value = ?, 
+        lab_value = ?, 
+        prereq = ?, 
+        iscomputer_lab = ?, 
+        isnon_computer_lab = ?
+      WHERE course_id = ?`,
+      [
+        course_code,
+        course_description,
+        course_unit,
+        lab_unit,
+        lec_value,
+        lab_value,
+        prereq || null,
+        iscomputer_lab || 0,
+        isnon_computer_lab || 0,
+        id
+      ]
     );
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "Course not found" });
     }
+
     res.json({ message: "✅ Course updated successfully" });
+
   } catch (error) {
     console.error("❌ Error updating course:", error);
     res.status(500).json({ message: "Failed to update course" });
@@ -8169,20 +8241,42 @@ app.put("/update_course/:id", async (req, res) => {
 });
 
 
-// ✅ Delete a course
+// DELETE COURSE
 app.delete("/delete_course/:id", async (req, res) => {
   const { id } = req.params;
+
   try {
     const [result] = await db3.query("DELETE FROM course_table WHERE course_id=?", [id]);
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "Course not found" });
     }
+
     res.json({ message: "✅ Course deleted successfully" });
+
   } catch (error) {
     console.error("❌ Error deleting course:", error);
     res.status(500).json({ message: "Failed to delete course" });
   }
 });
+
+
+// COURSE LIST
+app.get("/course_list", async (req, res) => {
+  const query = "SELECT * FROM course_table ORDER BY course_code ASC";
+
+  try {
+    const [result] = await db3.query(query);
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Query error:", err);
+    res.status(500).json({
+      error: "Query failed",
+      details: err.message,
+    });
+  }
+});
+
 
 
 

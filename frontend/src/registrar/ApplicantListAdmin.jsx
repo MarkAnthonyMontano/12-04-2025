@@ -46,6 +46,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import KeyIcon from "@mui/icons-material/Key";
 import CampaignIcon from '@mui/icons-material/Campaign';
 import API_BASE_URL from "../apiConfig";
+import ScoreIcon from '@mui/icons-material/Score';
 
 const AdminApplicantList = () => {
     const socket = useRef(null);
@@ -141,7 +142,7 @@ const AdminApplicantList = () => {
         { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
-        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <ScoreIcon fontSize="large" /> },
 
     ];
 

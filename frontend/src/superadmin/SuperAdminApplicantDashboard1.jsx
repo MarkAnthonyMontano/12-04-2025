@@ -1445,8 +1445,8 @@ const SuperAdminApplicantDashboard1 = () => {
                                     onBlur={handleBlur}
                                 >
                                     <MenuItem value=""><em>Select Campus</em></MenuItem>
-                                    <MenuItem value="0">MANILA</MenuItem>
-                                    <MenuItem value="1">CAVITE</MenuItem>
+                                    <MenuItem value="1">MANILA</MenuItem>
+                                    <MenuItem value="2">CAVITE</MenuItem>
                                 </Select>
 
                                 {errors.campus && (

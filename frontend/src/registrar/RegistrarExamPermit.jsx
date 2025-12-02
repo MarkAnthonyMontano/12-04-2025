@@ -655,7 +655,7 @@ const RegistrarExamPermit = ({ personId }) => {
                                             }}
                                         >
                                             <QRCodeSVG
-                                                value={`http://localhost:5173/examination_profile/${person.applicant_number}`}
+                                                value={`${API_BASE_URL}/examination_profile/${person.applicant_number}`}
                                                 size={150}
                                                 level="H"
                                             />

@@ -39,13 +39,14 @@ import LoadingOverlay from "../components/LoadingOverlay";
 import SearchIcon from "@mui/icons-material/Search";
 import KeyIcon from "@mui/icons-material/Key";
 import CampaignIcon from '@mui/icons-material/Campaign';
+import ScoreIcon from '@mui/icons-material/Score';
 
 const tabs = [
-       { label: "Admission Process for Registrar", to: "/applicant_list_admin", icon: <SchoolIcon fontSize="large" /> },
-        { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
-        { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
-        { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
-        { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <PersonSearchIcon fontSize="large" /> },
+  { label: "Admission Process for Registrar", to: "/applicant_list_admin", icon: <SchoolIcon fontSize="large" /> },
+  { label: "Applicant Form", to: "/admin_dashboard1", icon: <DashboardIcon fontSize="large" /> },
+  { label: "Student Requirements", to: "/student_requirements", icon: <AssignmentIcon fontSize="large" /> },
+  { label: "Examination Profile", to: "/registrar_examination_profile", icon: <PersonSearchIcon fontSize="large" /> },
+  { label: "Entrance Examination Score", to: "/applicant_scoring", icon: <ScoreIcon fontSize="large" /> },
 
 ];
 
@@ -60,7 +61,7 @@ const StudentRequirements = () => {
   const [requirements, setRequirements] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/requirements")
+    axios.get(`${API_BASE_URL}/api/requirements`)
       .then((res) => setRequirements(res.data))
       .catch((err) => console.error("Error loading requirements:", err));
   }, []);
@@ -86,7 +87,7 @@ const StudentRequirements = () => {
 
   const fetchByPersonId = async (personID) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/person_with_applicant/${personID}`);
+      const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${personID}`);
       setPerson(res.data);
       setSelectedPerson(res.data);
       if (res.data?.applicant_number) {
@@ -143,7 +144,7 @@ const StudentRequirements = () => {
 
     // fetch info of that person
     axios
-      .get(`http://localhost:5000/api/person_with_applicant/${personIdFromUrl}`)
+      .get(`${API_BASE_URL}/api/person_with_applicant/${personIdFromUrl}`)
       .then((res) => {
         if (res.data?.applicant_number) {
 
@@ -195,7 +196,7 @@ const StudentRequirements = () => {
 
     // 🏫 Logo
     if (settings.logo_url) {
-      setFetchedLogo(`http://localhost:5000${settings.logo_url}`);
+      setFetchedLogo(`${API_BASE_URL}/${settings.logo_url}`);
     } else {
       setFetchedLogo(EaristLogo);
     }
@@ -207,10 +208,8 @@ const StudentRequirements = () => {
 
   }, [settings]);
 
-
   const [hasAccess, setHasAccess] = useState(null);
   const [loading, setLoading] = useState(false);
-
 
   const pageId = 61;
 
@@ -241,7 +240,7 @@ const StudentRequirements = () => {
 
   const checkAccess = async (employeeID) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/page_access/${employeeID}/${pageId}`);
+      const response = await axios.get(`${API_BASE_URL}/api/page_access/${employeeID}/${pageId}`);
       if (response.data && response.data.page_privilege === 1) {
         setHasAccess(true);
       } else {
@@ -258,9 +257,6 @@ const StudentRequirements = () => {
       setLoading(false);
     }
   };
-
-
-
 
 
 
@@ -409,7 +405,7 @@ const StudentRequirements = () => {
   const fetchUploadsByApplicantNumber = async (applicant_number) => {
     if (!applicant_number) return;
     try {
-      const res = await axios.get(`http://localhost:5000/uploads/by-applicant/${applicant_number}`);
+      const res = await axios.get(`${API_BASE_URL}/uploads/by-applicant/${applicant_number}`);
       setUploads(res.data);
 
 
@@ -426,7 +422,7 @@ const StudentRequirements = () => {
       return;
     }
     try {
-      const res = await axios.get(`http://localhost:5000/api/person_with_applicant/${personID}`);
+      const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${personID}`);
       const safePerson = {
         ...res.data,
         document_status: res.data.document_status || "",
@@ -440,7 +436,7 @@ const StudentRequirements = () => {
 
   const fetchDocumentStatus = async (applicant_number) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/document_status/${applicant_number}`);
+      const response = await axios.get(`${API_BASE_URL}/api/document_status/${applicant_number}`);
       setDocumentStatus(response.data.document_status);
       setPerson((prev) => ({
         ...prev,
@@ -519,7 +515,7 @@ const StudentRequirements = () => {
 
   const fetchPersons = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/upload_documents');
+      const res = await axios.get(`${API_BASE_URL}/api/upload_documents`);
       setPersons(res.data);
     } catch (err) {
       console.error('Error fetching persons:', err);
@@ -528,7 +524,7 @@ const StudentRequirements = () => {
 
   const handleStatusChange = async (uploadId, remarkValue) => {
     try {
-      await axios.put(`http://localhost:5000/uploads/status/${uploadId}`, {
+      await axios.put(`${API_BASE_URL}/uploads/status/${uploadId}`, {
         status: remarkValue,
         user_id: userID,
       });
@@ -557,7 +553,7 @@ const StudentRequirements = () => {
 
     try {
       await axios.put(
-        `http://localhost:5000/api/document_status/${person.applicant_number}`,
+        `${API_BASE_URL}/api/document_status/${person.applicant_number}`,
         {
           document_status: newStatus,
           user_id: localStorage.getItem("person_id"),
@@ -598,7 +594,7 @@ const StudentRequirements = () => {
       formData.append("person_id", selectedPerson.person_id);
       formData.append("remarks", selectedFiles.remarks || "");
 
-      await axios.post("http://localhost:5000/api/upload", formData, {
+      await axios.post(`${API_BASE_URL}/api/upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           "x-person-id": localStorage.getItem("person_id"), // ✅ now inside headers
@@ -622,7 +618,7 @@ const StudentRequirements = () => {
 
   const handleDelete = async (uploadId) => {
     try {
-      await axios.delete(`http://localhost:5000/admin/uploads/${uploadId}`, {
+      await axios.delete(`${API_BASE_URL}/admin/uploads/${uploadId}`, {
         headers: {
           "x-person-id": localStorage.getItem("person_id"),
         },
@@ -675,7 +671,7 @@ const StudentRequirements = () => {
               onBlur={async () => {
                 const finalRemark = (remarksMap[uploadId] || "").trim();
 
-                await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                await axios.put(`${API_BASE_URL}/uploads/remarks/${uploadId}`, {
                   remarks: finalRemark,
                   status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                   user_id: userID,
@@ -692,7 +688,7 @@ const StudentRequirements = () => {
                   e.preventDefault();
                   const finalRemark = (remarksMap[uploadId] || "").trim();
 
-                  await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                  await axios.put(`${API_BASE_URL}/uploads/remarks/${uploadId}`, {
                     remarks: finalRemark,
                     status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                     user_id: userID,
@@ -840,7 +836,7 @@ const StudentRequirements = () => {
                 <Button
                   variant="contained"
                   sx={{ backgroundColor: '#1976d2', color: 'white' }}
-                  href={`http://localhost:5000/uploads/${uploaded.file_path}`}
+                  href={`${API_BASE_URL}/uploads/${uploaded.file_path}`}
                   target="_blank"
                 >
                   Preview
@@ -1384,7 +1380,7 @@ const StudentRequirements = () => {
                 }}
               >
                 <img
-                  src={`http://localhost:5000/uploads/${person.profile_img}`}
+                  src={`${API_BASE_URL}/uploads/${person.profile_img}`}
                   alt="Profile"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />

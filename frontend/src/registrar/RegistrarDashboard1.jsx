@@ -35,7 +35,7 @@ import LoadingOverlay from "../components/LoadingOverlay";
 import SearchIcon from "@mui/icons-material/Search";
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-
+import ScoreIcon from '@mui/icons-material/Score';
 
 
 
@@ -85,7 +85,7 @@ const RegistrarDashboard1 = () => {
         { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
         { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-        { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
         { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
         { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
 
@@ -1576,8 +1576,8 @@ const RegistrarDashboard1 = () => {
                                     onBlur={handleBlur}
                                 >
                                     <MenuItem value=""><em>Select Campus</em></MenuItem>
-                                    <MenuItem value="0">MANILA</MenuItem>
-                                    <MenuItem value="1">CAVITE</MenuItem>
+                                    <MenuItem value="1">MANILA</MenuItem>
+                                    <MenuItem value="2">CAVITE</MenuItem>
                                 </Select>
 
                                 {errors.campus && (

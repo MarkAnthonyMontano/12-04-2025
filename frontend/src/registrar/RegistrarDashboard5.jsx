@@ -27,6 +27,7 @@ import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
 import MenuBookIcon from '@mui/icons-material/MenuBook';
+import ScoreIcon from '@mui/icons-material/Score';
 
 const RegistrarDashboard5 = () => {
 
@@ -76,7 +77,7 @@ const RegistrarDashboard5 = () => {
         { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
         { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
 
-        { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <PersonSearchIcon fontSize="large" /> },
+        { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
         { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
         { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
 

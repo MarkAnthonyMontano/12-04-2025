@@ -176,7 +176,7 @@ const MedicalRequirements = () => {
 
         // fetch info of that person
         axios
-            .get(`http://localhost:5000/api/person_with_applicant/${personIdFromUrl}`)
+            .get(`${API_BASE_URL}/api/person_with_applicant/${personIdFromUrl}`)
             .then((res) => {
                 if (res.data?.student_number) {
 
@@ -650,7 +650,7 @@ const MedicalRequirements = () => {
                             onBlur={async () => {
                                 const finalRemark = (remarksMap[uploadId] || "").trim();
 
-                                await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                                await axios.put(`${API_BASE_URL}/uploads/remarks/${uploadId}`, {
                                     remarks: finalRemark,
                                     status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                                     user_id: userID,
@@ -667,7 +667,7 @@ const MedicalRequirements = () => {
                                     e.preventDefault();
                                     const finalRemark = (remarksMap[uploadId] || "").trim();
 
-                                    await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                                    await axios.put(`${API_BASE_URL}/uploads/remarks/${uploadId}`, {
                                         remarks: finalRemark,
                                         status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                                         user_id: userID,

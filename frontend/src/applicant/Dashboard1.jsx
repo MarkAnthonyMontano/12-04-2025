@@ -135,6 +135,18 @@ const Dashboard1 = (props) => {
   };
 
 
+  const [emailAddress, setEmailAddress] = useState("");
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("applicantEmail");
+    if (savedEmail) {
+      setPerson((prev) => ({
+        ...prev,
+        emailAddress: savedEmail
+      }));
+    }
+  }, []);
+
 
   // do not alter
   useEffect(() => {
@@ -1021,18 +1033,10 @@ const Dashboard1 = (props) => {
             <div className="flex items-center mb-4 gap-4">
               <label className="w-40 font-medium">Campus:</label>
               <FormControl fullWidth size="small" required error={!!errors.campus} className="mb-4">
-                <InputLabel id="campus-label">Campus (Manila/Cavite)</InputLabel>
-
                 <Select
-                  labelId="campus-label"
                   id="campus-select"
                   name="campus"
-                  value={
-                    person.campus === null || person.campus === undefined
-                      ? ""
-                      : String(person.campus)
-                  }
-                  label="Campus (Manila/Cavite)"
+                  value={person.campus != null ? String(person.campus) : ""}
                   onChange={(e) => {
                     const val = e.target.value;
                     handleChange({
@@ -1043,10 +1047,15 @@ const Dashboard1 = (props) => {
                     });
                   }}
                   onBlur={handleBlur}
+                  displayEmpty
                 >
-                  <MenuItem value=""><em>Select Campus</em></MenuItem>
-                  <MenuItem value="0">MANILA</MenuItem>
-                  <MenuItem value="1">CAVITE</MenuItem>
+                  {/* Placeholder as first selectable item */}
+                  <MenuItem value="">
+                    <em>Select Campus</em>
+                  </MenuItem>
+
+                  <MenuItem value="1">MANILA</MenuItem>
+                  <MenuItem value="2">CAVITE</MenuItem>
                 </Select>
 
                 {errors.campus && (
@@ -2006,28 +2015,13 @@ const Dashboard1 = (props) => {
                   name="emailAddress"
                   required
                   value={person.emailAddress || ""}
-                  placeholder="Enter your Email Address (e.g., username@gmail.com)"
-                  error={!!errors.emailAddress}
-                  helperText={errors.emailAddress ? "Please enter a valid email address." : ""}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/\s/g, "");
-                    handleChange({
-                      target: { name: "emailAddress", value: cleaned }
-                    });
+                  placeholder="Your registered email"
+           
+                  InputProps={{
+                    readOnly: true,
                   }}
-                  onBlur={(e) => {
-                    let value = e.target.value.trim();
-
-                    // If user typed "username" only → auto add domain
-                    if (value && !value.includes("@")) {
-                      value = value + "@gmail.com"; // ← YOU CAN CHANGE THIS DEFAULT DOMAIN
-                    }
-
-                    handleChange({
-                      target: { name: "emailAddress", value }
-                    });
-
-                    handleUpdate(person);
+                  sx={{
+                    backgroundColor: "#f0f0f0",
                   }}
                 />
 

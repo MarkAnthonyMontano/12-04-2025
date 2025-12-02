@@ -1044,7 +1044,7 @@ const AssignScheduleToApplicants = () => {
                 }
 
                 try {
-                  const res = await axios.post("http://localhost:5000/cancel-unscheduled-applicants");
+                  const res = await axios.post(`${API_BASE_URL}/cancel-unscheduled-applicants`);
                   alert(res.data.message);
                 } catch (err) {
                   console.error(err);

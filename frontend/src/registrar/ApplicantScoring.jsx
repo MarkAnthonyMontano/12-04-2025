@@ -176,7 +176,7 @@ const ApplicantScoring = () => {
 
         // fetch info of that person
         axios
-            .get(`http://localhost:5000/api/person_with_applicant/${personIdFromUrl}`)
+            .get(`${API_BASE_URL}/api/person_with_applicant/${personIdFromUrl}`)
             .then((res) => {
                 if (res.data?.applicant_number) {
 
@@ -343,8 +343,6 @@ const ApplicantScoring = () => {
         generalAverage1: "",
         program: "",
         created_at: "",
-        middle_code: "",
-        created_at: ""
     });
     const [allApplicants, setAllApplicants] = useState([]);
 

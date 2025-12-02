@@ -20,40 +20,43 @@ import {
     TableRow,
     MenuItem
 } from '@mui/material';
-import API_BASE_URL from "../apiConfig";
 import Search from '@mui/icons-material/Search';
+import API_BASE_URL from "../apiConfig";
 import { Link, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { Snackbar, Alert } from "@mui/material";
-import SchoolIcon from '@mui/icons-material/School';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
-import ScheduleIcon from '@mui/icons-material/Schedule';
-import PeopleIcon from '@mui/icons-material/People';
-import PersonSearchIcon from '@mui/icons-material/PersonSearch';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import SchoolIcon from "@mui/icons-material/School";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import PersonSearchIcon from "@mui/icons-material/PersonSearch";
+import PeopleIcon from "@mui/icons-material/People";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import SearchIcon from "@mui/icons-material/Search";
+import KeyIcon from "@mui/icons-material/Key";
+import CampaignIcon from '@mui/icons-material/Campaign';
+import ScoreIcon from '@mui/icons-material/Score';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
-
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 
 const tabs = [
+
     { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
     { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
     { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
- 
-    { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <PersonSearchIcon fontSize="large" /> },
+    { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
     { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
     { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
+
 
 ];
 
 
-
-const StudentRequirements = () => {
+const RegistrarRequirements = () => {
     const navigate = useNavigate();
     const [activeStep, setActiveStep] = useState(2);
     const [clickedSteps, setClickedSteps] = useState(Array(tabs.length).fill(false));
@@ -63,7 +66,7 @@ const StudentRequirements = () => {
     const [requirements, setRequirements] = useState([]);
 
     useEffect(() => {
-        axios.get("http://localhost:5000/api/requirements")
+        axios.get(`${API_BASE_URL}/api/requirements`)
             .then((res) => setRequirements(res.data))
             .catch((err) => console.error("Error loading requirements:", err));
     }, []);
@@ -89,7 +92,7 @@ const StudentRequirements = () => {
 
     const fetchByPersonId = async (personID) => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/person_with_applicant/${personID}`);
+            const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${personID}`);
             setPerson(res.data);
             setSelectedPerson(res.data);
             if (res.data?.applicant_number) {
@@ -104,14 +107,16 @@ const StudentRequirements = () => {
 
     const handleStepClick = (index, to) => {
         setActiveStep(index);
-
         const pid = sessionStorage.getItem("admin_edit_person_id");
-        if (pid) {
+
+        if (pid && to !== "/applicant_list_admin") {
             navigate(`${to}?person_id=${pid}`);
         } else {
             navigate(to);
         }
     };
+
+
 
     const location = useLocation();
     const [uploads, setUploads] = useState([]);
@@ -135,6 +140,36 @@ const StudentRequirements = () => {
         extension: "",
         applicant_number: "",
     });
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const personIdFromUrl = queryParams.get("person_id");
+
+        if (!personIdFromUrl) return;
+
+        // fetch info of that person
+        axios
+            .get(`${API_BASE_URL}/api/person_with_applicant/${personIdFromUrl}`)
+            .then((res) => {
+                if (res.data?.applicant_number) {
+
+                    // AUTO-INSERT applicant_number into search bar
+                    setSearchQuery(res.data.applicant_number);
+
+                    // If you have a fetchUploads() or fetchExamScore() — call it
+                    if (typeof fetchUploadsByApplicantNumber === "function") {
+                        fetchUploadsByApplicantNumber(res.data.applicant_number);
+                    }
+
+                    if (typeof fetchApplicants === "function") {
+                        fetchApplicants();
+                    }
+                }
+            })
+            .catch((err) => console.error("Auto search failed:", err));
+    }, [location.search]);
+
+
     const [editingRemarkId, setEditingRemarkId] = useState(null);
     const [newRemarkMode, setNewRemarkMode] = useState({}); // { [upload_id]: true|false }
     const [documentStatus, setDocumentStatus] = useState("");
@@ -166,7 +201,7 @@ const StudentRequirements = () => {
 
         // 🏫 Logo
         if (settings.logo_url) {
-            setFetchedLogo(`http://localhost:5000${settings.logo_url}`);
+            setFetchedLogo(`${API_BASE_URL}/${settings.logo_url}`);
         } else {
             setFetchedLogo(EaristLogo);
         }
@@ -178,10 +213,8 @@ const StudentRequirements = () => {
 
     }, [settings]);
 
-
     const [hasAccess, setHasAccess] = useState(null);
     const [loading, setLoading] = useState(false);
-
 
     const pageId = 49;
 
@@ -212,7 +245,7 @@ const StudentRequirements = () => {
 
     const checkAccess = async (employeeID) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/page_access/${employeeID}/${pageId}`);
+            const response = await axios.get(`${API_BASE_URL}/api/page_access/${employeeID}/${pageId}`);
             if (response.data && response.data.page_privilege === 1) {
                 setHasAccess(true);
             } else {
@@ -229,9 +262,6 @@ const StudentRequirements = () => {
             setLoading(false);
         }
     };
-
-
-
 
 
 
@@ -380,7 +410,7 @@ const StudentRequirements = () => {
     const fetchUploadsByApplicantNumber = async (applicant_number) => {
         if (!applicant_number) return;
         try {
-            const res = await axios.get(`http://localhost:5000/uploads/by-applicant/${applicant_number}`);
+            const res = await axios.get(`${API_BASE_URL}/uploads/by-applicant/${applicant_number}`);
             setUploads(res.data);
 
 
@@ -397,7 +427,7 @@ const StudentRequirements = () => {
             return;
         }
         try {
-            const res = await axios.get(`http://localhost:5000/api/person_with_applicant/${personID}`);
+            const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${personID}`);
             const safePerson = {
                 ...res.data,
                 document_status: res.data.document_status || "",
@@ -411,7 +441,7 @@ const StudentRequirements = () => {
 
     const fetchDocumentStatus = async (applicant_number) => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/document_status/${applicant_number}`);
+            const response = await axios.get(`${API_BASE_URL}/api/document_status/${applicant_number}`);
             setDocumentStatus(response.data.document_status);
             setPerson((prev) => ({
                 ...prev,
@@ -490,7 +520,7 @@ const StudentRequirements = () => {
 
     const fetchPersons = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/upload_documents');
+            const res = await axios.get(`${API_BASE_URL}/api/upload_documents`);
             setPersons(res.data);
         } catch (err) {
             console.error('Error fetching persons:', err);
@@ -499,7 +529,7 @@ const StudentRequirements = () => {
 
     const handleStatusChange = async (uploadId, remarkValue) => {
         try {
-            await axios.put(`http://localhost:5000/uploads/status/${uploadId}`, {
+            await axios.put(`${API_BASE_URL}/uploads/status/${uploadId}`, {
                 status: remarkValue,
                 user_id: userID,
             });
@@ -528,7 +558,7 @@ const StudentRequirements = () => {
 
         try {
             await axios.put(
-                `http://localhost:5000/api/document_status/${person.applicant_number}`,
+                `${API_BASE_URL}/api/document_status/${person.applicant_number}`,
                 {
                     document_status: newStatus,
                     user_id: localStorage.getItem("person_id"),
@@ -569,7 +599,7 @@ const StudentRequirements = () => {
             formData.append("person_id", selectedPerson.person_id);
             formData.append("remarks", selectedFiles.remarks || "");
 
-            await axios.post("http://localhost:5000/api/upload", formData, {
+            await axios.post(`${API_BASE_URL}/api/upload`, formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                     "x-person-id": localStorage.getItem("person_id"), // ✅ now inside headers
@@ -593,7 +623,7 @@ const StudentRequirements = () => {
 
     const handleDelete = async (uploadId) => {
         try {
-            await axios.delete(`http://localhost:5000/admin/uploads/${uploadId}`, {
+            await axios.delete(`${API_BASE_URL}/admin/uploads/${uploadId}`, {
                 headers: {
                     "x-person-id": localStorage.getItem("person_id"),
                 },
@@ -635,7 +665,9 @@ const StudentRequirements = () => {
                     {uploadId && editingRemarkId === uploadId ? (
                         // 🔥 TEXTFIELD ONLY
                         <TextField
-                            disabled
+                            InputProps={{
+                                readOnly: true,
+                            }}
                             size="small"
                             fullWidth
                             autoFocus
@@ -647,7 +679,7 @@ const StudentRequirements = () => {
                             onBlur={async () => {
                                 const finalRemark = (remarksMap[uploadId] || "").trim();
 
-                                await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                                await axios.put(`${API_BASE_URL}/uploads/remarks/${uploadId}`, {
                                     remarks: finalRemark,
                                     status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                                     user_id: userID,
@@ -664,7 +696,7 @@ const StudentRequirements = () => {
                                     e.preventDefault();
                                     const finalRemark = (remarksMap[uploadId] || "").trim();
 
-                                    await axios.put(`http://localhost:5000/uploads/remarks/${uploadId}`, {
+                                    await axios.put(`${API_BASE_URL}/uploads/remarks/${uploadId}`, {
                                         remarks: finalRemark,
                                         status: uploads.find((u) => u.upload_id === uploadId)?.status || "0",
                                         user_id: userID,
@@ -681,6 +713,7 @@ const StudentRequirements = () => {
                     ) : (
                         // 📌 DISPLAY MODE with GRAY BORDER (click to edit)
                         <Box
+                            disabled
                             onClick={() => {
                                 if (!uploadId) return;
                                 setEditingRemarkId(uploadId);
@@ -689,6 +722,7 @@ const StudentRequirements = () => {
                                     [uploadId]: uploaded?.remarks ?? "",
                                 }));
                             }}
+
                             sx={{
                                 cursor: uploadId ? "pointer" : "default",
                                 fontStyle: uploaded?.remarks ? "normal" : "italic",
@@ -817,7 +851,7 @@ const StudentRequirements = () => {
                                 <Button
                                     variant="contained"
                                     sx={{ backgroundColor: '#1976d2', color: 'white' }}
-                                    href={`http://localhost:5000/uploads/${uploaded.file_path}`}
+                                    href={`${API_BASE_URL}/uploads/${uploaded.file_path}`}
                                     target="_blank"
                                 >
                                     Preview
@@ -932,7 +966,7 @@ const StudentRequirements = () => {
                             onClick={() => handleStepClick(index, tab.to)}
                             sx={{
                                 flex: `1 1 ${100 / tabs.length}%`, // evenly divide row
-                                height: 140,
+                                height: 135,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -1362,7 +1396,7 @@ const StudentRequirements = () => {
                                 }}
                             >
                                 <img
-                                    src={`http://localhost:5000/uploads/${person.profile_img}`}
+                                    src={`${API_BASE_URL}/uploads/${person.profile_img}`}
                                     alt="Profile"
                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
@@ -1370,7 +1404,6 @@ const StudentRequirements = () => {
                         )}
                     </Box>
                 </TableContainer>
-
 
 
 
@@ -1445,4 +1478,4 @@ const StudentRequirements = () => {
     );
 };
 
-export default StudentRequirements;
+export default RegistrarRequirements;

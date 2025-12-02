@@ -308,8 +308,7 @@ const Dashboard2 = (props) => {
 
     // Guardian fields always required:
     requiredFields.push(
-      "guardian", "guardian_family_name", "guardian_given_name", "guardian_middle_name",
-      "guardian_nickname", "guardian_address", "guardian_contact"
+      "guardian", "guardian_family_name", "guardian_given_name", "guardian_middle_name", "guardian_address", "guardian_contact"
     );
 
     // Annual income always required:
@@ -1510,40 +1509,40 @@ const Dashboard2 = (props) => {
 
                   </Box>
 
+                  <Box flex={1}>
+                    <Typography variant="subtitle2" mb={0.5}>Mother Email Address</Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      required
+                      name="mother_email"
+                      placeholder="Enter Mother Email"
+                      value={person.mother_email || ""}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/\s/g, "");
+                        handleChange({
+                          target: { name: "mother_email", value: cleaned }
+                        });
+                      }}
+                      onBlur={(e) => {
+                        let value = e.target.value.trim();
+                        if (value && !value.includes("@")) {
+                          value += "@gmail.com";
+                        }
+                        handleChange({
+                          target: { name: "mother_email", value }
+                        });
+
+                        handleUpdate(person);
+                      }}
+                      error={errors.mother_email}
+                      helperText={errors.mother_email ? "Please enter a valid email address." : ""}
+                    />
+                  </Box>
 
                 </>
               )}
 
-              <Box flex={1}>
-                <Typography variant="subtitle2" mb={0.5}>Mother Email Address</Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  required
-                  name="mother_email"
-                  placeholder="Enter Mother Email"
-                  value={person.mother_email || ""}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/\s/g, "");
-                    handleChange({
-                      target: { name: "mother_email", value: cleaned }
-                    });
-                  }}
-                  onBlur={(e) => {
-                    let value = e.target.value.trim();
-                    if (value && !value.includes("@")) {
-                      value += "@gmail.com";
-                    }
-                    handleChange({
-                      target: { name: "mother_email", value }
-                    });
-
-                    handleUpdate(person);
-                  }}
-                  error={errors.mother_email}
-                  helperText={errors.mother_email ? "Please enter a valid email address." : ""}
-                />
-              </Box>
 
             </Box>
 
@@ -1570,6 +1569,7 @@ const Dashboard2 = (props) => {
                   <MenuItem value="Mother">Mother</MenuItem>
                   <MenuItem value="Brother/Sister">Brother/Sister</MenuItem>
                   <MenuItem value="Uncle">Uncle</MenuItem>
+                  <MenuItem value="Aunt">Aunt</MenuItem>
                   <MenuItem value="StepFather">Stepfather</MenuItem>
                   <MenuItem value="StepMother">Stepmother</MenuItem>
                   <MenuItem value="Cousin">Cousin</MenuItem>

@@ -82,9 +82,12 @@ const Login = ({ setIsAuthenticated }) => {
       }
 
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("applicantEmail", response.data.email);
       localStorage.setItem("email", response.data.email);
       localStorage.setItem("role", response.data.role);
       localStorage.setItem("person_id", response.data.person_id);
+
+      localStorage.setItem("applicantEmail", response.data.email);
 
       setIsAuthenticated(true);
       setSnack({ open: true, message: "Login Successfully", severity: "success" });
@@ -157,7 +160,7 @@ const Login = ({ setIsAuthenticated }) => {
             </div>
             <div className="HeaderBody">
               <strong style={{
-               color: "white",
+                color: "white",
               }}>{settings?.company_name || "Company Name"}</strong>
               <p>Student Information System</p>
             </div>
@@ -285,7 +288,7 @@ const Login = ({ setIsAuthenticated }) => {
             <div style={{
               height: "50px",
               borderRadius: "10px",
-              border: `2px solid ${borderColor}`, 
+              border: `2px solid ${borderColor}`,
               backgroundColor: mainButtonColor,  // ✅ same color (prevents mismatch)
 
             }} className="Button" onClick={handleLogin}>

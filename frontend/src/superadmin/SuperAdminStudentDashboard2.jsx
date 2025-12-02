@@ -1161,7 +1161,7 @@ const SuperAdminStudentDashboard2 = () => {
                                                 error={!!errors.father_contact}
                                                 helperText={errors.father_contact && "This field is required."}
                                                 InputProps={{
-                                                   
+
                                                     startAdornment: (
                                                         <Typography sx={{ mr: 1, fontWeight: "bold" }}>+63</Typography>
                                                     ),
@@ -1173,7 +1173,7 @@ const SuperAdminStudentDashboard2 = () => {
                                         <Box flex={1}>
                                             <Typography variant="subtitle2" mb={0.5}>Father Occupation</Typography>
                                             <TextField
-                                             
+
 
                                                 fullWidth
                                                 size="small"
@@ -1192,7 +1192,7 @@ const SuperAdminStudentDashboard2 = () => {
                                         <Box flex={1}>
                                             <Typography variant="subtitle2" mb={0.5}>Father Employer</Typography>
                                             <TextField
-                                           
+
 
                                                 fullWidth
                                                 size="small"
@@ -1211,7 +1211,7 @@ const SuperAdminStudentDashboard2 = () => {
                                         <Box flex={1}>
                                             <Typography variant="subtitle2" mb={0.5}>Father Income</Typography>
                                             <TextField
-                                         
+
 
                                                 fullWidth
                                                 size="small"
@@ -1240,7 +1240,7 @@ const SuperAdminStudentDashboard2 = () => {
                                     <Box flex={1}>
                                         <Typography variant="subtitle2" mb={0.5}>Father Email Address</Typography>
                                         <TextField
-                                      
+
 
                                             fullWidth
                                             size="small"
@@ -1629,15 +1629,16 @@ const SuperAdminStudentDashboard2 = () => {
                                     <MenuItem value="Father">Father</MenuItem>
                                     <MenuItem value="Mother">Mother</MenuItem>
                                     <MenuItem value="Brother/Sister">Brother/Sister</MenuItem>
-                                    <MenuItem value="GrandMother">GrandMother</MenuItem>
-                                    <MenuItem value="GrandFather">GrandFather</MenuItem>
                                     <MenuItem value="Uncle">Uncle</MenuItem>
+                                    <MenuItem value="Aunt">Aunt</MenuItem>
                                     <MenuItem value="StepFather">Stepfather</MenuItem>
                                     <MenuItem value="StepMother">Stepmother</MenuItem>
                                     <MenuItem value="Cousin">Cousin</MenuItem>
                                     <MenuItem value="Father in Law">Father-in-law</MenuItem>
                                     <MenuItem value="Mother in Law">Mother-in-law</MenuItem>
                                     <MenuItem value="Sister in Law">Sister-in-law</MenuItem>
+                                    <MenuItem value="GrandMother">GrandMother</MenuItem>
+                                    <MenuItem value="GrandFather">GrandFather</MenuItem>
                                     <MenuItem value="Spouse">Spouse</MenuItem>
                                     <MenuItem value="Others">Others</MenuItem>
                                 </Select>
