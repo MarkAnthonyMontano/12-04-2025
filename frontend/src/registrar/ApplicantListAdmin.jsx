@@ -483,24 +483,28 @@ const AdminApplicantList = () => {
 
     const filteredPersons = persons
         .filter((personData) => {
+
+            /* 🔎 SEARCH */
             const fullText = `${personData.first_name} ${personData.middle_name} ${personData.last_name} ${personData.emailAddress ?? ''} ${personData.applicant_number ?? ''}`.toLowerCase();
             const matchesSearch = fullText.includes(searchQuery.toLowerCase());
 
+            /* 🏫 CAMPUS */
             const matchesCampus =
-                person.campus === "" || // All Campuses
+                person.campus === "" ||
                 String(personData.campus) === String(person.campus);
 
-            // ✅ FIX: use document_status and normalize both sides
+            /* 📄 DOCUMENT STATUS */
             const matchesApplicantStatus =
                 selectedApplicantStatus === "" ||
                 normalize(personData.document_status) === normalize(selectedApplicantStatus);
 
-            // (keep your registrar filter; shown here with the earlier mapping)
+            /* 📝 REGISTRAR STATUS */
             const matchesRegistrarStatus =
                 selectedRegistrarStatus === "" ||
                 (selectedRegistrarStatus === "Submitted" && personData.registrar_status === 1) ||
                 (selectedRegistrarStatus === "Unsubmitted / Incomplete" && personData.registrar_status === 0);
 
+            /* 🎓 PROGRAM / DEPARTMENT FILTERS */
             const programInfo = allCurriculums.find(
                 (opt) => opt.curriculum_id?.toString() === personData.program?.toString()
             );
@@ -513,37 +517,38 @@ const AdminApplicantList = () => {
                 selectedDepartmentFilter === "" ||
                 programInfo?.dprtmnt_name === selectedDepartmentFilter;
 
-            const applicantAppliedYear = new Date(personData.created_at).getFullYear();
+            /* 📅 YEAR (safe date parsing) */
+            const appliedDate = new Date(personData.created_at + "T00:00:00");
+            const applicantAppliedYear = appliedDate.getFullYear();
+
             const schoolYear = schoolYears.find((sy) => sy.year_id === selectedSchoolYear);
-
             const matchesSchoolYear =
-                selectedSchoolYear === "" || (schoolYear && (String(applicantAppliedYear) === String(schoolYear.current_year)))
+                selectedSchoolYear === "" ||
+                (schoolYear && String(applicantAppliedYear) === String(schoolYear.current_year));
 
+            /* 🕒 SEMESTER */
             const matchesSemester =
                 selectedSchoolSemester === "" ||
                 String(personData.middle_code) === String(selectedSchoolSemester);
 
-            // date range (unchanged)
+            /* 📆 FROM–TO DATE RANGE (fixed 100%) */
             let matchesDateRange = true;
-            if (person.fromDate && person.toDate) {
-                const appliedDate = new Date(personData.created_at);
-                const from = new Date(person.fromDate);
-                const to = new Date(person.toDate);
-                matchesDateRange = appliedDate >= from && appliedDate <= to;
-            } else if (person.fromDate) {
-                const appliedDate = new Date(personData.created_at);
-                const from = new Date(person.fromDate);
-                matchesDateRange = appliedDate >= from;
-            } else if (person.toDate) {
-                const appliedDate = new Date(personData.created_at);
-                const to = new Date(person.toDate);
-                matchesDateRange = appliedDate <= to;
+
+            if (person.fromDate) {
+                const from = new Date(person.fromDate + "T00:00:00");
+                if (appliedDate < from) matchesDateRange = false;
             }
 
+            if (person.toDate) {
+                const to = new Date(person.toDate + "T00:00:00");
+                if (appliedDate > to) matchesDateRange = false;
+            }
+
+            /* 📥 SUBMITTED DOCUMENTS */
             const matchesSubmittedDocs =
                 !showSubmittedOnly || personData.submitted_documents === 1;
 
-
+            /* ✅ FINAL MATCHES */
             return (
                 matchesSearch &&
                 matchesCampus &&
@@ -557,15 +562,17 @@ const AdminApplicantList = () => {
                 matchesDateRange
             );
         })
-        .sort((a, b) => {
-            const dateA = new Date(a.created_at);
-            const dateB = new Date(b.created_at);
 
-            // FIRST PRIORITY: ALWAYS SORT BY CREATED_AT
+        /* 🔽 SORTING */
+        .sort((a, b) => {
+            const dateA = new Date(a.created_at + "T00:00:00");
+            const dateB = new Date(b.created_at + "T00:00:00");
+
+            // FIRST: ALWAYS SORT BY CREATED_AT
             if (dateA < dateB) return -1;
             if (dateA > dateB) return 1;
 
-            // SECOND PRIORITY: If dates are the same, use selected sort
+            // SECOND: SORT BY SELECTED OPTION
             if (sortBy === "name") {
                 const fieldA = `${a.last_name} ${a.first_name} ${a.middle_name || ""}`.toLowerCase();
                 const fieldB = `${b.last_name} ${b.first_name} ${b.middle_name || ""}`.toLowerCase();
@@ -1136,21 +1143,6 @@ const AdminApplicantList = () => {
                             Print Applicant List
                         </button>
 
-                        {/* To Date */}
-                        <FormControl size="small" sx={{ width: 200 }}>
-
-                            <InputLabel shrink htmlFor="to-date">To Date</InputLabel>
-                            <TextField
-                                id="to-date"
-                                type="date"
-                                size="small"
-                                name="toDate"
-                                value={person.toDate || ""}
-                                onChange={(e) => setPerson(prev => ({ ...prev, toDate: e.target.value }))}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </FormControl>
-
                         {/* From Date */}
                         <FormControl size="small" sx={{ width: 200 }}>
                             <InputLabel shrink htmlFor="from-date">From Date</InputLabel>
@@ -1161,6 +1153,20 @@ const AdminApplicantList = () => {
                                 name="fromDate"
                                 value={person.fromDate || ""}
                                 onChange={(e) => setPerson(prev => ({ ...prev, fromDate: e.target.value }))}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </FormControl>
+
+                        <FormControl size="small" sx={{ width: 200 }}>
+
+                            <InputLabel shrink htmlFor="to-date">To Date</InputLabel>
+                            <TextField
+                                id="to-date"
+                                type="date"
+                                size="small"
+                                name="toDate"
+                                value={person.toDate || ""}
+                                onChange={(e) => setPerson(prev => ({ ...prev, toDate: e.target.value }))}
                                 InputLabelProps={{ shrink: true }}
                             />
                         </FormControl>
@@ -1670,15 +1676,17 @@ const AdminApplicantList = () => {
                                     {person.strand}
                                 </TableCell>
 
-
-                                {/* Created Date */}
                                 {/* Created Date */}
                                 <TableCell
                                     sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}
                                 >
                                     {(() => {
-                                        const date = new Date(person.created_at);
-                                        if (isNaN(date)) return person.created_at; // fallback if invalid
+                                        if (!person.created_at) return "";
+
+                                        const date = new Date(person.created_at + "T00:00:00");
+
+                                        if (isNaN(date)) return person.created_at;
+
                                         return date.toLocaleDateString("en-US", {
                                             year: "numeric",
                                             month: "long",
@@ -1686,6 +1694,7 @@ const AdminApplicantList = () => {
                                         });
                                     })()}
                                 </TableCell>
+
 
 
 

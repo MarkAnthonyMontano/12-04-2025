@@ -409,6 +409,7 @@ const QualifyingExamScore = () => {
     const filteredPersons = persons.filter((personData) => {
         const finalRating = Number(personData.final_rating) || 0;
 
+        /* ⭐ SCORE FILTER */
         const matchesScore =
             (minScore === "" || finalRating >= Number(minScore)) &&
             (maxScore === "" || finalRating <= Number(maxScore));
@@ -416,6 +417,7 @@ const QualifyingExamScore = () => {
         const matchesExactRating =
             exactRating === "" || finalRating === Number(exactRating);
 
+        /* 🔎 SEARCH */
         const query = searchQuery.toLowerCase();
         const fullName = `${personData.first_name ?? ""} ${personData.middle_name ?? ""} ${personData.last_name ?? ""}`.toLowerCase();
 
@@ -423,9 +425,11 @@ const QualifyingExamScore = () => {
         const matchesName = fullName.includes(query);
         const matchesEmail = personData.emailAddress?.toLowerCase().includes(query);
 
+        /* 🎓 PROGRAM */
         const programInfo = allCurriculums.find(
             (opt) => opt.curriculum_id?.toString() === personData.program?.toString()
         );
+
         const matchesProgramQuery = programInfo?.program_code?.toLowerCase().includes(query);
 
         const matchesDepartment =
@@ -434,16 +438,21 @@ const QualifyingExamScore = () => {
         const matchesProgramFilter =
             selectedProgramFilter === "" || programInfo?.program_code === selectedProgramFilter;
 
-        const applicantAppliedYear = new Date(personData.created_at).getFullYear();
+        /* 📅 CREATED_AT — FIXED TO MANILA TIME */
+        const appliedDate = new Date(personData.created_at + "T00:00:00");
+        const applicantAppliedYear = appliedDate.getFullYear();
+
         const schoolYear = schoolYears.find((sy) => sy.year_id === selectedSchoolYear);
 
         const matchesSchoolYear =
-            selectedSchoolYear === "" || (schoolYear && (String(applicantAppliedYear) === String(schoolYear.current_year)));
+            selectedSchoolYear === "" ||
+            (schoolYear && String(applicantAppliedYear) === String(schoolYear.current_year));
 
         const matchesSemester =
             selectedSchoolSemester === "" ||
             String(personData.middle_code) === String(selectedSchoolSemester);
 
+        /* FINAL FILTER RESULT */
         return (
             (matchesApplicantID || matchesName || matchesEmail || matchesProgramQuery) &&
             matchesDepartment &&
@@ -455,6 +464,9 @@ const QualifyingExamScore = () => {
         );
     });
 
+
+
+    /* ⭐ SORTING (ALSO FIXED CREATED_AT) */
     const sortedPersons = React.useMemo(() => {
         return filteredPersons
             .slice()
@@ -467,11 +479,18 @@ const QualifyingExamScore = () => {
                 const bInterview = Number(editScores[b.person_id]?.qualifying_interview_score ?? b.qualifying_interview_score ?? 0);
                 const bTotal = (bExam + bInterview) / 2;
 
-                if (bTotal !== aTotal) return bTotal - aTotal;           // highest total first
-                return new Date(a.created_at) - new Date(b.created_at);  // if tie, earliest created_at
+                /* ⭐ SORT BY TOTAL SCORE FIRST */
+                if (bTotal !== aTotal) return bTotal - aTotal;
+
+                /* ⭐ THEN BY CREATED_AT USING MANILA SAFE PARSING */
+                const dateA = new Date(a.created_at + "T00:00:00");
+                const dateB = new Date(b.created_at + "T00:00:00");
+
+                return dateA - dateB; // earliest first
             })
-            .slice(0, topCount); // limit to top 10/20/30/50/100
+            .slice(0, topCount);
     }, [filteredPersons, editScores, topCount]);
+
 
     // ✅ 3. Pagination logic AFTER sortedPersons exists
     const totalPages = Math.ceil(sortedPersons.length / itemsPerPage);
@@ -1583,6 +1602,8 @@ Thank you, best regards
                     <Box display="flex" flexDirection="column" gap={2}>
                         {/* From Date + Print Button */}
                         <Box display="flex" alignItems="flex-end" gap={2}>
+
+                            {/* From Date */}
                             <FormControl size="small" sx={{ width: 200 }}>
                                 <InputLabel shrink htmlFor="from-date">From Date</InputLabel>
                                 <TextField
@@ -1595,6 +1616,8 @@ Thank you, best regards
                                     InputLabelProps={{ shrink: true }}
                                 />
                             </FormControl>
+
+
 
                             <button
                                 onClick={printDiv}
@@ -1629,6 +1652,7 @@ Thank you, best regards
                         {/* To Date + Import Button */}
                         <Box display="flex" alignItems="flex-end" gap={2}>
                             <FormControl size="small" sx={{ width: 200 }}>
+
                                 <InputLabel shrink htmlFor="to-date">To Date</InputLabel>
                                 <TextField
                                     id="to-date"
@@ -1640,6 +1664,10 @@ Thank you, best regards
                                     InputLabelProps={{ shrink: true }}
                                 />
                             </FormControl>
+
+
+
+
 
                             {/* ✅ Import Excel beside To Date */}
                             <Box display="flex" alignItems="center" gap={1}>
@@ -2332,18 +2360,27 @@ Thank you, best regards
                                     </TableCell>
 
 
-                                    <TableCell
-                                        sx={{
-                                            color: "black",
-                                            textAlign: "center",
-                                            border: `2px solid ${borderColor}`,
 
-                                            py: 0.5,
-                                            fontSize: "12px",
-                                        }}
+
+                                    <TableCell
+                                        sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}
                                     >
-                                        {person.created_at}
+                                        {(() => {
+                                            if (!person.created_at) return "";
+
+                                            const date = new Date(person.created_at + "T00:00:00");
+
+                                            if (isNaN(date)) return person.created_at;
+
+                                            return date.toLocaleDateString("en-US", {
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric",
+                                            });
+                                        })()}
                                     </TableCell>
+
+
 
                                     <TableCell
                                         sx={{

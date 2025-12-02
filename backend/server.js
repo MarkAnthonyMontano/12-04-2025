@@ -8,7 +8,6 @@ const bodyparser = require("body-parser");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { createCanvas, loadImage } = require("canvas");
 const QRCode = require("qrcode");
 
 require("dotenv").config();
@@ -24,7 +23,7 @@ const io = new Server(http, {
 
 app.use(express.json());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://192.168.50.2:5173"],  // ✅ Explicitly allow Vite dev server
+  origin: ["http://localhost:5173", "http://192.168.84.245:5173"],  // ✅ Explicitly allow Vite dev server
   credentials: true                  // ✅ Allow credentials (cookies, auth)
 }));
 
@@ -68,7 +67,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// ---------------- PROFILE UPLOAD (Registrar) ----------------
 // ---------------- PROFILE UPLOAD (Registrar) ----------------
 const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => {

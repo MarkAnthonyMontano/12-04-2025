@@ -208,13 +208,20 @@ const RegisterProf = () => {
   const filteredProfessors = React.useMemo(() => {
     return professors
       .filter((p) => {
+        // Search filter
         const fullText = `${p.fname || ""} ${p.mname || ""} ${p.lname || ""} ${p.email || ""}`.toLowerCase();
         const matchesSearch = fullText.includes(searchQuery);
+
+        // Department filter
         const matchesDepartment =
-          selectedDepartmentFilter === "" || p.dprtmnt_name === selectedDepartmentFilter;
+          selectedDepartmentFilter === "" ||                  // All departments
+          (selectedDepartmentFilter === "unassigned" && !p.dprtmnt_id) || // Unassigned
+          p.dprtmnt_id === selectedDepartmentFilter;          // Matches specific department
+
         return matchesSearch && matchesDepartment;
       })
       .sort((a, b) => {
+        // Sorting by full name
         const nameA = `${a.fname} ${a.lname}`.toLowerCase();
         const nameB = `${b.fname} ${b.lname}`.toLowerCase();
         if (sortOrder === "asc") return nameA.localeCompare(nameB);
@@ -677,9 +684,7 @@ const RegisterProf = () => {
                     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                       {/* Department Filter */}
                       <FormControl sx={{ width: "350px" }} size="small">
-                        <InputLabel id="filter-department-label">
-                          Filter by Department
-                        </InputLabel>
+                        <InputLabel id="filter-department-label">Filter by Department</InputLabel>
                         <Select
                           labelId="filter-department-label"
                           value={selectedDepartmentFilter}
@@ -688,12 +693,13 @@ const RegisterProf = () => {
                         >
                           <MenuItem value="">All Departments</MenuItem>
                           {department.map((dep) => (
-                            <MenuItem key={dep.dprtmnt_id} value={dep.dprtmnt_name}>
+                            <MenuItem key={dep.dprtmnt_id} value={dep.dprtmnt_id}>
                               {dep.dprtmnt_name} ({dep.dprtmnt_code})
                             </MenuItem>
                           ))}
                         </Select>
                       </FormControl>
+
 
                       <FormControl size="small" sx={{ width: "200px" }}>
                         <Select
@@ -864,7 +870,7 @@ const RegisterProf = () => {
                     EDIT
                   </Button>
                 </TableCell>
-                <TableCell sx={{ border: `2px solid ${borderColor}` , textAlign: "center" }}>
+                <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center" }}>
                   <Button
                     onClick={() => handleToggleStatus(prof.prof_id, prof.status)}
                     sx={{
