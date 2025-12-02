@@ -3,9 +3,10 @@ import { SettingsContext } from "../App";
 import '../styles/TempStyles.css';
 import axios from 'axios';
 import { FaFileExcel } from "react-icons/fa";
-import { Table, TableBody, TableCell, TableHead, TableRow, TableContainer, TextField, Button, FormControl, Select, InputLabel, MenuItem, Box, Typography, Paper, Snackbar, Alert} from "@mui/material";
+import { Table, TableBody, TableCell, TableHead, TableRow, TableContainer, TextField, Button, FormControl, Select, InputLabel, MenuItem, Box, Typography, Paper, Snackbar, Alert, Autocomplete} from "@mui/material";
 import API_BASE_URL from "../apiConfig";
 import { useLocation } from "react-router-dom";
+import { FcPrint } from "react-icons/fc";
 const GradingSheet = () => {
 
   const settings = useContext(SettingsContext);
@@ -75,7 +76,6 @@ const GradingSheet = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("asc");
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'info' });
-  const filteredStudents = students;
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -84,10 +84,6 @@ const GradingSheet = () => {
     if (section_id) handleFetchStudents(section_id);
     if (school_year_id) setSelectedActiveSchoolYear(school_year_id);
   }, [course_id, section_id, school_year_id]);
-
-  console.log(course_id,)
-  console.log(section_id)
-  console.log(school_year_id)
 
   useEffect(() => {
     if (selectedCourse && selectedSectionID && selectedActiveSchoolYear) {
@@ -153,8 +149,15 @@ const GradingSheet = () => {
 
   useEffect(() => {
     axios
-      .get(`${API_BASE_URL}/get_school_year/`)
-      .then((res) => setSchoolYears(res.data))
+      .get(`${API_BASE_URL}/get_school_year`)
+      .then((res) => {
+        const currentYear = new Date().getFullYear();
+        const filteredYears = res.data.filter(
+          (yearObj) => Number(yearObj.current_year) <= currentYear
+        );
+
+        setSchoolYears(filteredYears);
+      })
       .catch((err) => console.error(err));
   }, []);
 
@@ -194,9 +197,11 @@ const GradingSheet = () => {
   }, [selectedSchoolYear, selectedSchoolSemester]);
 
   const handleFetchStudents = async (department_section_id) => {
+    if (!selectedActiveSchoolYear) return;
+    
     try {
       const response = await fetch(
-        `${API_BASE_URL}/enrolled_student_list/${userID}/${selectedCourse}/${department_section_id}`
+        `${API_BASE_URL}/enrolled_student_list/${userID}/${selectedCourse}/${department_section_id}/${selectedActiveSchoolYear}`
       );
       const data = await response.json();
 
@@ -224,40 +229,247 @@ const GradingSheet = () => {
       setMessage("Fetch error");
     }
   };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFilter, setSearchFilter] = useState("all"); 
+  
+
+  const filteredStudents = students.filter((s) => {
+      const searchLower = searchQuery.toLowerCase();
+
+      // 🔍 SEARCH FILTER
+      const matchesSearch = (() => {
+        if (searchQuery === "") return true;
+
+        if (searchFilter === "student_number") {
+          return s.student_number.toString().includes(searchQuery);
+        }
+
+        if (searchFilter === "name") {
+          const fullName1 = `${s.first_name} ${s.last_name}`.toLowerCase();
+          const fullName2 = `${s.last_name} ${s.first_name}`.toLowerCase();
+
+          return (
+            fullName1.includes(searchLower) ||
+            fullName2.includes(searchLower) ||
+            s.first_name.toLowerCase().includes(searchLower) ||
+            s.middle_name?.toLowerCase().includes(searchLower) ||
+            s.last_name.toLowerCase().includes(searchLower)
+          );
+        }
+
+        return true;
+      })();
+
+      // 📌 OTHER FILTERS
+      const matchesYear =
+        selectedSchoolYear === "" ||
+        String(s.year_id) === String(selectedSchoolYear);
+
+      const matchesSemester =
+        selectedSchoolSemester === "" ||
+        String(s.semester_id) === String(selectedSchoolSemester);
+
+      const matchesCourse =
+        selectedCourse === "" || String(s.course_id) === String(selectedCourse);
+
+      const matchesSection =
+        selectedSectionID === "" ||
+        String(s.department_section_id) === String(selectedSectionID);
+
+      // ❗ IMPORTANT: add matchesSearch here
+      return (
+        matchesSearch &&
+        matchesYear &&
+        matchesSemester &&
+        matchesCourse &&
+        matchesSection
+      );
+    })
+
+  const gradeStats = filteredStudents.reduce(
+  (acc, student) => {
+    switch (student.en_remarks) {
+      case 0:
+        acc.noGrade += 1;
+        break;
+      case 1:
+        acc.passed += 1;
+        break;
+      case 2:
+        acc.failed += 1;
+        break;
+      case 3:
+        acc.incomplete += 1;
+        break;
+      case 4:
+        acc.drop += 1;
+        break;
+      default:
+        break;
+    }
+    return acc;
+  },
+  { noGrade: 0, passed: 0, failed: 0, incomplete: 0, drop: 0 }
+);
+
+  const gradeOptions = [
+    ...Array.from({ length: 41 }, (_, i) => (100 - i).toString()), // "100" -> "60"
+    "INC",
+    "DRP",
+  ];
+
+  function validateGradeInput(rawValue) {
+  if (rawValue === null || rawValue === undefined) return "";
+
+  let value = String(rawValue).trim().toUpperCase();
+
+  // Auto-correct variations of INC
+  if (/^INC/.test(value)) return "INC";
+
+  // Auto-correct variations of DROP
+  if (/^DRP/.test(value)) return "DRP";
+
+  // If the user typed letters (gibberish)
+  if (/^[A-Z]+$/.test(value)) {
+    return "60"; // fallback to minimum passing grade
+  }
+
+  // Only digits allowed
+  if (!/^\d{1,3}$/.test(value)) {
+    return "60"; // fallback instead of resetting
+  }
+
+  let num = Number(value);
+  if (isNaN(num)) return "60";
+
+  // clamp 60–100
+  if (num > 100) num = 100;
+  if (num < 60) num = 60;
+
+  return String(num);
+}
+
+const setRemarksFromRating = (rating) => {
+  switch (rating) {
+    case "1.00":
+    case "1.25":
+    case "1.50":
+    case "1.75":
+    case "2.00":
+    case "2.25":
+    case "2.50":
+    case "2.75":
+    case "3.00":
+      return 1; // PASSED
+    case "5.00":
+      return 2; // FAILED
+    default:
+      return 3; // INCOMPLETE or others
+  }
+};
+
+  // ----------------- GradeSelect component -----------------
+const GradeSelect = ({ value, onChange, placeholder = "" }) => {
+  const [inputValue, setInputValue] = React.useState(value ?? "");
+
+  useEffect(() => {
+    setInputValue(value ?? "");
+  }, [value]);
+
+  return (
+    <Autocomplete
+  freeSolo
+  disableClearable
+  options={gradeOptions}
+  inputValue={inputValue}
+  value={inputValue}
+  onInputChange={(event, newInputValue, reason) => {
+    if (reason === "input") {
+      setInputValue(newInputValue.toUpperCase());
+    }
+  }}
+  onChange={(event, newValue) => {
+    if (newValue !== null) {
+      const validated = validateGradeInput(newValue);
+      setInputValue(validated);
+      onChange(validated);
+    }
+  }}
+  renderInput={(params) => (
+    <TextField
+      {...params}
+      placeholder={placeholder}
+      size="small"
+      variant="outlined"
+      onBlur={() => {
+        const validated = validateGradeInput(inputValue);
+        setInputValue(validated);
+        onChange(validated);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault(); // prevent form submission
+          const validated = validateGradeInput(inputValue);
+          setInputValue(validated);
+          onChange(validated); // ← this triggers selection
+        }
+      }}
+      sx={{ textAlign: "center", width: "80px" }}
+    />
+  )}
+  sx={{
+    "& .MuiAutocomplete-inputRoot": {
+      textAlign: "center",
+      fontFamily: "Poppins",
+    },
+  }}
+/>
+
+  );
+};
+
+
+
 
   const handleChanges = (index, field, value) => {
-    const updatedStudents = [...students];
-    updatedStudents[index][field] = value;
+  const updatedStudents = [...students];
+  updatedStudents[index][field] = value?.toUpperCase();
 
-    console.log(updatedStudents);
-    if (field === "midterm" || field === "finals") {
-      let midterm = parseFloat(updatedStudents[index].midterm);
-      let finals = parseFloat(updatedStudents[index].finals);
-
-      if (!isNaN(midterm)) midterm = parseFloat(midterm.toFixed(2));
-      if (!isNaN(finals)) finals = parseFloat(finals.toFixed(2));
-
-      const finalGrade = finalGradeCalc(updatedStudents[index].midterm, updatedStudents[index].finals);
-      console.log(midterm, finals, finalGrade)
-      updatedStudents[index].final_grade = finalGrade;
-
-      if (midterm === 5.00 || finals === 5.00) {
-        updatedStudents[index].en_remarks = 2; 
-      } else if (String(midterm).toLowerCase() === "inc" || String(finals).toLowerCase() === "inc") {
-        updatedStudents[index].en_remarks = 3;
-      } else if (finalGrade === 0.00 || finals < 1.00 || midterm < 1.00 || isNaN(midterm) || isNaN(finals)) {
-        updatedStudents[index].en_remarks = 0;
-      } else if (finalGrade >= 1.00 && finalGrade <= 3.00) {
-        updatedStudents[index].en_remarks = 1;
-      } else if (finalGrade >= 3.25) {
-        updatedStudents[index].en_remarks = 2;
-      } else {
-        updatedStudents[index].en_remarks = 3;
-      }
+  // ----------------------------
+  // AUTO-SYNC DRP BETWEEN MID/FIN
+  // ----------------------------
+  if (value?.toUpperCase() === "DRP") {
+    if (field === "midterm") {
+      updatedStudents[index].finals = "DRP";   // autofill finals
+    } else if (field === "finals") {
+      updatedStudents[index].midterm = "DRP";   // autofill midterm
     }
-
-    setStudents(updatedStudents);
   }
+
+  // After auto-sync, re-read the values
+  const midterm = updatedStudents[index].midterm;
+  const finals = updatedStudents[index].finals;
+
+  // ---------------------------------------
+  // Your grading and remarks logic (unchanged)
+  // ---------------------------------------
+
+  updatedStudents[index].final_grade = finals;
+
+  if (midterm === "DRP" || finals === "DRP") {
+    updatedStudents[index].en_remarks = 4;
+  } else if (midterm === "INC" || finals === "INC") {
+    updatedStudents[index].en_remarks = 3;
+  } else if (finals === "0.00") {
+    updatedStudents[index].en_remarks = 0;
+  } else {
+    const rating = convertRawToRating(finals); 
+    updatedStudents[index].en_remarks = setRemarksFromRating(rating);
+  }
+
+  setStudents(updatedStudents);
+};
+
 
   const addStudentInfo = async (student) => {
     try {
@@ -308,40 +520,52 @@ const GradingSheet = () => {
   }
 
   const remarkConversion = (student) => {
-    if (student.en_remarks == 0) {
+    if (student.en_remarks === 0) {
       return "ONGOING";
-    } else if (student.en_remarks == 1) {
+    } else if (student.en_remarks === 1) {
       return "PASSED";
-    } else if (student.en_remarks == 2) {
+    } else if (student.en_remarks === 2) {
       return "FAILED";
-    } else if (student.en_remarks == 3) {
+    } else if (student.en_remarks === 3) {
       return "INCOMPLETE";
-    } else if (student.en_remarks == 4) {
-      return "DROP";
+    } else if (student.en_remarks === 4) {
+      return "DROPPED";
     } else {
       console.log("Error in Remark Conversion")
     }
   };
 
-  const finalGradeCalc = (midterm, finals) => {
-    if ( String(midterm).toLowerCase() === "inc" || String(finals).toLowerCase() === "inc") {
-      return "INC";
-    }
 
-    const midtermScore = parseFloat(midterm);
-    const finalScore = parseFloat(finals);
+  function convertRawToRating(value) {
+    if (value === null || value === undefined || value === "") return "";
 
-    if (isNaN(midtermScore) || isNaN(finalScore)) {
-      return "Invalid input";
-    } 
-    
-    const finalGrade = (midtermScore + finalScore) / 2;
-    return finalGrade.toFixed(2);
-  };
+    const v = String(value).trim().toUpperCase();
+
+    // Handle INC and DROP
+    if (v === "INC") return "Incomplete";
+    if (v === "DROP" || v === "DRP") return "Dropped";
+
+    // Handle numeric values
+    const num = Number(v);
+    if (isNaN(num) || num === "0.00" || num === 0.00) return ""; // anything invalid
+
+    if (num >= 97 && num <= 100) return "1.00";
+    if (num >= 94 && num <= 96) return "1.25";
+    if (num >= 91 && num <= 93) return "1.50";
+    if (num >= 88 && num <= 90) return "1.75";
+    if (num >= 85 && num <= 87) return "2.00";
+    if (num >= 82 && num <= 84) return "2.25";
+    if (num >= 79 && num <= 81) return "2.50";
+    if (num >= 76 && num <= 78) return "2.75";
+    if (num === 75) return "3.00";
+    if (num < 75) return "5.00";
+
+    return "";
+  }
 
   const handleSelectCourseChange = (event) => {
     setSelectedCourse(event.target.value);
-  };
+  };  
 
   const handleSchoolYearChange = (event) => {
     setSelectedSchoolYear(event.target.value);
@@ -472,6 +696,68 @@ const GradingSheet = () => {
     setStudents(sorted);
   };
 
+   const divToPrintRef = useRef();
+    
+    const printDiv = () => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "absolute";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
+  
+      const doc = iframe.contentWindow.document;
+      doc.open();
+  
+      doc.write(`
+        <html>
+          <head>
+            <title>Print</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0.5in; /* 0.5 inch margins */
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 13px;
+              }
+              th, td {
+                border: 1px solid black;
+                padding: 6px;
+                text-align: left;
+              }
+              th {
+                background-color: #f0f0f0;
+              }
+              h2, h3, h4 {
+                text-align: center;
+                margin: 0;
+              }
+              h3 {
+                margin-top: 20px;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+              }
+              @media print {
+                @page { margin: 0.5in; size: auto; }
+              }
+            </style>
+          </head>
+          <body>
+            ${divToPrintRef.current.innerHTML}
+          </body>
+        </html>
+      `);
+  
+      doc.close();
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      document.body.removeChild(iframe);
+    };
+
+
   // 🔒 Disable right-click
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -514,7 +800,75 @@ const GradingSheet = () => {
          GRADING SHEET
         </Typography>
 
+          <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+        {/* Search Filter Dropdown */}
+        <select
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
+          style={{
+            padding: "8px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            marginTop: "10px",
+            outline: "none"
+          }}
+        >
+          <option value="all">Search All</option>
+          <option value="student_number">Student Number</option>
+          <option value="name">Name</option>
+        </select>
 
+        {/* Search Bar */}
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            padding: "8px",
+            width: "250px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            outline: "none",
+            marginTop: "10px",
+          }}
+        />
+        
+      </div>
+
+      <button
+        onClick={printDiv}
+        style={{
+          width: "308px",
+          padding: "10px 20px",
+          border: "2px solid black",
+          backgroundColor: "#f0f0f0",
+          color: "black",
+          borderRadius: "5px",
+          cursor: "pointer",
+          fontSize: "16px",
+          fontWeight: "bold",
+          transition: "background-color 0.3s, transform 0.2s",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        onMouseEnter={(e) => (e.target.style.backgroundColor = "#d3d3d3")}
+        onMouseLeave={(e) => (e.target.style.backgroundColor = "#f0f0f0")}
+        onMouseDown={(e) => (e.target.style.transform = "scale(0.95)")}
+        onMouseUp={(e) => (e.target.style.transform = "scale(1)")}
+      >
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <FcPrint size={20} />
+          Print Grade
+        </span>
+      </button>
 
 
       </Box>
@@ -530,7 +884,7 @@ const GradingSheet = () => {
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                   {/* Left: Total Count */}
                   <Typography fontSize="14px" fontWeight="bold" color="white">
-                    Total Students: {filteredStudents.length}
+                    Total Students: {students.length}
                   </Typography>
 
                   {/* Right: Pagination Controls */}
@@ -801,7 +1155,7 @@ const GradingSheet = () => {
                     gap: "8px",
                     justifyContent: "center",
                     userSelect: "none",
-                    width: "230px", // ✅ same width as Print
+                    width: "230px",
                   }}
                   type="button"
                 >
@@ -879,7 +1233,9 @@ const GradingSheet = () => {
               <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Name</TableCell>
               <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Section</TableCell>
               <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Midterm</TableCell>
+              <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Equivalent</TableCell>
               <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Finals</TableCell>
+              <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Equivalent</TableCell>
               <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Final Grade</TableCell>
               <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Remarks</TableCell>
               <TableCell sx={{ color: "white", textAlign: "center", fontSize: "12px", border: `2px solid ${borderColor}` }}>Action</TableCell>
@@ -890,55 +1246,45 @@ const GradingSheet = () => {
           <TableBody>
             {message ? (
               <TableRow>
-                <TableCell colSpan={9} sx={{ textAlign: "center", padding: "1rem", border: "1px solid gray" }}>
+                <TableCell colSpan={11} sx={{ textAlign: "center", padding: "1rem", border: "1px solid gray" }}>
                   {message}
                 </TableCell>
               </TableRow>
             ) : (
-              students.map((student, index) => (
+              filteredStudents.map((student, index) => (
                 <TableRow key={index}>
                   <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>{index + 1}</TableCell>
                   <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>{student.student_number}</TableCell>
-                  <TableCell sx={{ border: `2px solid ${borderColor}` }}>
+                  <TableCell sx={{ border: `2px solid ${borderColor}`, width: "350px" }}>
                     {student.last_name}, {student.first_name} {student.middle_name}
                   </TableCell>
                   <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
                     {student.program_code}-{student.section_description}
                   </TableCell>
                   <TableCell sx={{ border: `2px solid ${borderColor}` }}>
-                    <input
-                      type="text"
+                    <GradeSelect
                       value={student.midterm}
-                      onChange={(e) => handleChanges(index, "midterm", e.target.value)}
-                      style={{
-                        border: "none",
-                        textAlign: "center",
-                        background: "none",
-                        outline: "none",
-                        width: "100%",
-                        fontFamily: "Poppins",
-                      }}
+                      onChange={(val) => handleChanges(index, "midterm", val)}
+                      placeholder="Enter grade"
                     />
                   </TableCell>
+                  <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center" }}>
+                    {convertRawToRating(student.midterm)}
+                  </TableCell>
                   <TableCell sx={{ border: `2px solid ${borderColor}` }}>
-                    <input
-                      type="text"
+                    <GradeSelect
                       value={student.finals}
-                      onChange={(e) => handleChanges(index, "finals", e.target.value)}
-                      style={{
-                        border: "none",
-                        textAlign: "center",
-                        background: "none",
-                        outline: "none",
-                        width: "100%",
-                        fontFamily: "Poppins",
-                      }}
+                      onChange={(val) => handleChanges(index, "finals", val)}
+                      placeholder="Enter grade"
                     />
+                  </TableCell>
+                  <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center"}}>
+                    {convertRawToRating(student.finals)}
                   </TableCell>
                   <TableCell sx={{ border: `2px solid ${borderColor}` }}>
                     <input
                       type="text"
-                      value={finalGradeCalc(student.midterm, student.finals)}
+                      value={convertRawToRating(student.finals)}
                       readOnly
                       style={{
                         border: "none",
@@ -951,18 +1297,17 @@ const GradingSheet = () => {
                     />
                   </TableCell>
                   <TableCell sx={{ border: `2px solid ${borderColor}` }}>
-                    <select
-                      name="en_remarks"
-                      value={student.en_remarks}
-                      className="w-full outline-none"
+                    <span 
+                      className="w-full inline-block text-center"
+                      style={{ width: 100 }}
                     >
-                      <option value="">{remarkConversion(student)}</option>
-                    </select>
+                      {remarkConversion(student)}
+                    </span>
                   </TableCell>
                   <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
                     <Button sx={{
                       height: "40px",
-                      width: "200px", // ✅ matches Print
+                      width: "100px", // ✅ matches Print
                       backgroundColor: mainButtonColor,
                       "&:hover": { backgroundColor: "" },
                       color: "white"
@@ -977,6 +1322,247 @@ const GradingSheet = () => {
           </TableBody>
         </Table>
       </TableContainer>
+      
+      <div style={{ display: "none" }}>
+        <div ref={divToPrintRef} style={{margin: "0.5in"}}>
+          <style>
+            {`
+              @media print {
+                body {
+                  margin: 0.5in;
+                }
+                table {
+                  page-break-inside: auto;
+                }
+                tr {
+                  page-break-inside: avoid;
+                  page-break-after: auto;
+                }
+                  
+              }
+            `}
+          </style>
+          {/* Header Section */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "20px",
+            }}
+          >
+            {/* Logo */}
+            <div>
+            
+                <img
+                  src={fetchedLogo}
+                  alt="Logo"
+                  style={{ width: "80px", height: "80px", objectFit: "contain", marginTop: "-10px" }}
+                />
+            
+            </div>
+
+            {/* School Info */}
+            <div style={{ textAlign: "center", flex: 1, marginLeft: "10px", marginRight: "10px" }}>
+              <span style={{ margin: 0, fontSize: "12px" }}>Republic of the Philippines</span>
+              <h2 style={{ margin: 0, fontSize: "20px", letterSpacing: "-1px"}}>{companyName}</h2>
+              <span style={{ margin: 0, fontSize: "12px" }}>{campusAddress || "Nagtahan St. Sampaloc, Manila"}</span>
+            </div>
+
+            {/* Empty space or right-aligned info */}
+            <div style={{ width: "80px" }}></div>
+          </div>
+
+          <div style={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", lineSpacing: "-1px", marginTop: "2rem", marginBottom: "1rem"}}>
+            <span style={{fontSize: "20px"}}><b>GRADE SHEET</b></span>
+          </div>
+
+          {/* School Info Table */}
+          <table style={{ borderCollapse: "collapse", fontSize: "12px", lineHeight: "1", padding: 0 }}>
+            <thead>
+              {/* Subject Code + Class Section */}
+              <tr>
+                <td colSpan={1} style={{ width: "80px", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>Subject Code:</td>
+                <td colSpan={7} style={{ borderRight: "none", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  {filteredStudents[0]?.course_code || ""}
+                </td>
+
+                <td colSpan={1} style={{paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "end" }}>Ac. Year & Term:</div>
+                </td>
+
+                <td colSpan={1} style={{paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  {filteredStudents[0]?.current_year || ""}-{filteredStudents[0]?.next_year || ""}, {filteredStudents[0]?.semester_description || ""},
+                </td>
+              </tr>
+
+              {/* Subject Title + Year Level */}
+              <tr>
+                <td colSpan={1} style={{ width: "80px", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>Subject Title:</td>
+
+                <td colSpan={7} style={{ borderRight: "none", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  {filteredStudents[0]?.course_description || ""}
+                </td>
+
+                <td colSpan={1} style={{ paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "end" }}>Section:</div>
+                </td>
+
+                <td colSpan={1} style={{ paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  {filteredStudents[0]?.program_code || ""}-{filteredStudents[0]?.section_description || ""}
+                </td>
+              </tr>
+
+              {/* Academic Units + Lab Units + Schedule */}
+              <tr>
+                <td colSpan={1} style={{width: "80px", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>Lec Units:</td>
+
+                <td colSpan={1} style={{paddingRight: "2px", textAlign: "center", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px"  }}>
+                  {filteredStudents[0]?.course_unit || "0"}
+                </td>
+
+                <td colSpan={1} style={{width: "80px", borderLeft: "none", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px"  }}>Lab Units:</td>
+
+                <td colSpan={1} style={{ paddingRight: "2px", textAlign: "center", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  {filteredStudents[0]?.lab_unit || "0"}
+                </td>
+
+                <td colSpan={1} style={{width: "80px", borderLeft: "none", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px"  }}>Credit Units:</td>
+
+                <td colSpan={1} style={{ paddingRight: "2px", textAlign: "center", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  {filteredStudents[0]?.lab_unit + filteredStudents[0]?.course_unit}
+                </td>
+
+                <td colSpan={2} style={{ paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px"  }}>
+                  <div style={{ display: "flex", justifyContent: "end" }}></div>
+                </td>
+
+                <td colSpan={1} style={{ paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", paddingTop: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "end" }}>Session:</div>
+                </td>
+                <td colSpan={1} style={{paddingRight: "2px", paddingLeft: "2px", borderBottom: "none", paddingBottom: "1px", paddingTop: "6px", width: "60px"}}>
+                  {/* {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student, index) => (
+                      <div key={index}>
+                        {student.schedules.map((sch, i) => (
+                          <div key={i}>
+                            {sch.day} {sch.start} - {sch.end}
+                          </div>
+                        ))}
+                      </div>
+                    ))
+                  ) : (
+                    <div>TBA</div>
+                  )} */}
+                </td>
+              </tr>
+              {/* Faculty */}
+              <tr>
+                <td colSpan={1} style={{width: "80px", paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px", borderTop: "none" }}>Faculty:</td>
+                <td colSpan={7} style={{paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px" }}>{profData.fname} {profData.mname} {profData.lname}</td>
+                <td colSpan={1} style={{paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px" }}><div style={{ display: "flex", justifyContent: "end" }}>Date Posted:</div></td>
+                <td colSpan={1} style={{paddingRight: "2px", paddingLeft: "2px", paddingBottom: "1px" }}></td>
+              </tr>
+            </thead>
+          </table>
+
+          {/* Students Table */}
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", marginTop: "0.5rem" }}>
+            <thead>
+              <tr>
+                <th rowSpan={2} style={{ border: "1px solid black", padding: "2px 0px", width: "30px", textAlign: "center"}}>#</th>
+                <th rowSpan={2} style={{ border: "1px solid black", padding: "2px 0px", width: "80px", textAlign: "center"}}>Student No.</th>
+                <th rowSpan={2} style={{ border: "1px solid black", padding: "2px", width: "200px", textAlign: "start"}}>Student Name</th>
+                <th colSpan={5} style={{ border: "1px solid black", padding: "2px 0px", textAlign: "center"}}>GRADES</th>
+              </tr>
+              <tr>
+                <th style={{ border: "1px solid black", padding: "2px 0px", fontSize: "10px", width: "50px", textAlign: "center"}}>Mid</th>
+                <th style={{ border: "1px solid black", padding: "2px 0px", fontSize: "10px", width: "50px", textAlign: "center"}}>Final</th>
+                <th style={{ border: "1px solid black", padding: "2px 0px", fontSize: "10px", width: "50px", textAlign: "center"}}>Final Grade</th>
+                <th style={{ border: "1px solid black", padding: "2px 0px", fontSize: "10px", width: "50px", textAlign: "center"}}>Re exam</th>
+                <th style={{ border: "1px solid black", padding: "2px 0px", fontSize: "10px", width: "50px", textAlign: "center"}}>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((s, index) => (
+                  <tr key={s.student_number}>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px", textAlign: "center" }}>{index + 1}</td>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px", textAlign: "center" }}>{s.student_number}</td>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px" }}>{`${s.last_name}, ${s.first_name} ${s.middle_name || ""}`}</td>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px", textAlign: "center" }}>{convertRawToRating(s.midterm)}  </td>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px", textAlign: "center" }}>{convertRawToRating(s.finals)}</td>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px", textAlign: "center" }}>{convertRawToRating(s.final_grade)}</td>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px", textAlign: "center" }}></td>
+                    <td style={{ border: "1px solid black", fontSize: "10px", padding: "6px", textAlign: "center" }}>{remarkConversion(s)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={11} style={{ border: "1px solid black", padding: "6px", textAlign: "center" }}>
+                    No class details available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <div style={{display: "flex", alignItems: "center", gap: "2rem"}}>
+            <div style={{marginTop:"1rem", padding: "1.7rem", fontSize: "12px", border: "1px solid black", maxWidth: "170px"}}>
+              <div style={{textDecoration: "underline", textUnderlineOffset: "2px"}}>Grade Sheet Statistic</div>
+              <div style={{display: "flex", alignItems: "center"}}>
+                <span style={{marginLeft: "16px", width: "10rem"}}>Passed</span>
+                <span>{gradeStats.passed}</span>
+              </div>
+              <div style={{display: "flex", alignItems: "center"}}>
+                <span style={{marginLeft: "16px", width: "10rem"}}>Failed</span>
+                <span>{gradeStats.failed}</span>
+              </div>
+              <div style={{display: "flex", alignItems: "center"}}>
+                <span style={{marginLeft: "16px", width: "10rem"}}>Incomplete</span>
+                <span>{gradeStats.incomplete}</span>
+              </div>
+              <div style={{display: "flex", alignItems: "center"}}>
+                <span style={{marginLeft: "16px", width: "10rem"}}>Drop</span>
+                <span>{gradeStats.drop}</span>
+              </div>
+              <div style={{display: "flex", alignItems: "center"}}>
+                <span style={{marginLeft: "16px", width: "10rem"}}>No Grade</span>
+                <span>{gradeStats.noGrade}</span>
+              </div>
+              <div style={{display: "flex", alignItems: "center", borderTop: "1px solid black"}}>
+                <span style={{marginLeft: "16px", width: "10rem"}}>Total # of Students</span>
+                <span>{filteredStudents.length}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "2rem", marginTop:"0.5rem"}}>
+              <div style={{ display: "flex", justifyContent: "space-between", width: "450px" }}>
+                <div style={{ textAlign: "center", width: "45%" }}>
+                  <div style={{fontSize: "12px"}}>{profData.fname} {profData.mname[0] || ""}. {profData.lname}</div>
+                  <div style={{borderTop:"solid 1px black", fontSize: "12px"}}>Instructor</div>
+                </div>
+
+                <div style={{ textAlign: "center", width: "45%" }}>
+                  <div>&nbsp;</div>
+                  <div style={{borderTop:"solid 1px black", fontSize: "12px"}}>Department Chairperson</div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", width: "450px" }}>
+                <div style={{ textAlign: "center", width: "45%" }}>
+                  <div>&nbsp;</div>
+                  <div style={{borderTop:"solid 1px black", fontSize: "12px"}}>Dean, {filteredStudents[0]?.dprtmnt_name}</div>
+                </div>
+
+                <div style={{ textAlign: "center", width: "45%" }}>
+                  <div>&nbsp;</div>
+                  <div style={{borderTop:"solid 1px black", fontSize: "12px"}}>Registrar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Snackbar
         open={snack.open}
         autoHideDuration={3000}

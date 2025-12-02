@@ -10712,27 +10712,6 @@ app.post("/grade_period_activate/:id", async (req, res) => {
 
 
 
-app.get('/course_assigned_to/:userID', async (req, res) => {
-  const { userID } = req.params;
-
-  try {
-    const sql = `
-    SELECT DISTINCT tt.course_id, ct.course_description, ct.course_code, yt.year_id, st.semester_id FROM time_table AS tt
-      INNER JOIN course_table AS ct ON tt.course_id = ct.course_id
-      INNER JOIN prof_table AS pt ON tt.professor_id = pt.prof_id
-      INNER JOIN active_school_year_table AS sy ON tt.school_year_id = sy.id
-      INNER JOIN year_table AS yt ON sy.year_id = yt.year_id
-      INNER JOIN semester_table AS st ON sy.semester_id = st.semester_id
-    WHERE pt.person_id = ? AND ct.office_duty = 0
-    `
-    const [result] = await db3.query(sql, [userID]);
-    res.json(result);
-  } catch (err) {
-    console.error("Server Error: ", err);
-    res.status(500).send({ message: "Internal Error", err });
-  }
-});
-
 
 
 
@@ -10779,6 +10758,7 @@ app.get('/handle_section_of/:userID/:selectedCourse/:selectedActiveSchoolYear', 
     res.status(500).send({ message: "Internal Error", err });
   }
 });
+
 
 app.get('/get_school_year', async (req, res) => {
   try {
@@ -10856,8 +10836,9 @@ app.get('/get_selecterd_year/:selectedSchoolYear/:selectedSchoolSemester', async
 });
 
 // UPDATED 09/06/2025
-app.get('/enrolled_student_list/:userID/:selectedCourse/:department_section_id', async (req, res) => {
-  const { userID, selectedCourse, department_section_id } = req.params;
+
+app.get('/enrolled_student_list/:userID/:selectedCourse/:department_section_id/:activeSchoolYear', async (req, res) => {
+  const { userID, selectedCourse, department_section_id, activeSchoolYear } = req.params;
 
   try {
 
@@ -10875,12 +10856,26 @@ app.get('/enrolled_student_list/:userID/:selectedCourse/:department_section_id',
         ptbl.last_name, 
         ptbl.first_name, 
         ptbl.middle_name, 
+        ylt.year_description,
+        smt.semester_description,
         es.midterm, 
         es.finals, 
         es.final_grade, 
         es.en_remarks,
         st.description AS section_description,
-        pgt.program_code
+        pgt.program_code,
+        dst.id,
+        smt.semester_id,
+        es.active_school_year_id,
+        ylt.year_id,
+        ylt.year_description AS current_year,
+        ylt.year_description + 1 AS next_year,
+        cst.course_id,
+        cst.course_description,
+        cst.course_code,
+        cst.course_unit,
+        cst.lab_unit,
+        dt.dprtmnt_name
       FROM enrolled_subject AS es
         INNER JOIN student_numbering_table AS snt ON es.student_number = snt.student_number
         INNER JOIN person_table AS ptbl ON snt.person_id = ptbl.person_id
@@ -10890,16 +10885,97 @@ app.get('/enrolled_student_list/:userID/:selectedCourse/:department_section_id',
         INNER JOIN section_table AS st ON dst.section_id = st.id
         INNER JOIN curriculum_table AS ct ON es.curriculum_id = ct.curriculum_id
         INNER JOIN program_table AS pgt ON ct.program_id = pgt.program_id
-      WHERE pt.person_id = ? AND es.course_id = ? AND es.department_section_id = ?
+        INNER JOIN active_school_year_table AS sy ON es.active_school_year_id = sy.id
+        INNER JOIN year_table AS ylt ON sy.year_id = ylt.year_id
+        INNER JOIN semester_table AS smt ON sy.semester_id = smt.semester_id
+        INNER JOIN course_table AS cst ON  es.course_id = cst.course_id
+        INNER JOIN dprtmnt_curriculum_table AS dct ON ct.curriculum_id = dct.curriculum_id
+        INNER JOIN dprtmnt_table AS dt ON dct.dprtmnt_id = dt.dprtmnt_id
+      WHERE pt.person_id = ? AND es.course_id = ? AND es.department_section_id = ? AND es.active_school_year_id = ?
     `;
+    
 
-    const [result] = await db3.query(sql, [userID, selectedCourse, department_section_id]);
+    const [result] = await db3.query(sql, [userID, selectedCourse, department_section_id, activeSchoolYear]);
     res.json(result);
+    console.log(result)
   } catch (err) {
     console.error("Server Error: ", err);
     res.status(500).send({ message: "Internal Error", err });
   }
 });
+
+function getFormattedTimestamp() {
+  const now = new Date();
+  
+  let month = now.getMonth() + 1; // Months start at 0
+  let day = now.getDate();
+  let year = now.getFullYear();
+
+  let hours = now.getHours();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12; // hour '0' should be '12'
+
+  // Add leading zeros
+  const mm = month < 10 ? "0" + month : month;
+  const dd = day < 10 ? "0" + day : day;
+  const hh = hours < 10 ? "0" + hours : hours;
+  const min = minutes < 10 ? "0" + minutes : minutes;
+  const ss = seconds < 10 ? "0" + seconds : seconds;
+
+  return `${mm}/${dd}/${year} ${hh}:${min}:${ss} ${ampm}`;
+}
+
+app.put("/add_grades", async (req, res) => {
+  const { midterm, finals, final_grade, en_remarks, student_number, subject_id } = req.body;
+  console.log("Received data:", { midterm, finals, final_grade, en_remarks, student_number, subject_id });
+
+  try {
+    const [rows] = await db3.execute(`SELECT id, description, status FROM period_status WHERE id = 3`);
+    if (!rows.length || rows[0].status !== 1) {
+      return res.status(400).json({ message: "The uploading of grades is still not open." });
+    }
+
+    const isIncomplete =
+      String(midterm).toLowerCase() === "inc" ||
+      String(midterm).toLowerCase() === "incomplete" ||
+      String(finals).toLowerCase() === "inc" ||
+      String(finals).toLowerCase() === "incomplete";
+
+    const timestamp = getFormattedTimestamp();
+    if (isIncomplete) {
+      const [result] = await db3.execute(
+        `UPDATE enrolled_subject 
+        SET midterm = ?, finals = ? , final_grade= "0.00", grades_status = 'INC', en_remarks = 3, created_at = ?
+        WHERE student_number = ? AND course_id = ?`,
+        [midterm, finals, timestamp, student_number, subject_id]
+      );
+
+      return result.affectedRows > 0
+        ? res.status(200).json({ message: "Grades marked as INC successfully!" })
+        : res.status(404).json({ message: "No matching record found to update." });
+    }
+
+    const [result] = await db3.execute(
+      `UPDATE enrolled_subject 
+      SET midterm = ?, finals = ?, final_grade = ?, grades_status = ?, en_remarks = ?, created_at = ?
+      WHERE student_number = ? AND course_id = ?`,
+      [midterm, finals, final_grade, final_grade, en_remarks, student_number, subject_id]
+    );
+
+    return result.affectedRows > 0
+      ? res.status(200).json({ message: "Grades updated successfully!" })
+      : res.status(404).json({ message: "No matching record found to update." });
+
+  } catch (err) {
+    console.error("Failed to update grades:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // API ROOM SCHEDULE
 app.get("/get_room/:profID/:roomID", async (req, res) => {
