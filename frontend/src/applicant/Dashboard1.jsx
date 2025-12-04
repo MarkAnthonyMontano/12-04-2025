@@ -588,12 +588,12 @@ const Dashboard1 = (props) => {
     // Generic required fields
     requiredFields.forEach((field) => {
       const value = person[field];
-      const stringValue = value?.toString().trim();
-
-      if (!stringValue) {
+      if (value === null || value === undefined || value === "" || value === "null" || value === "undefined") {
         newErrors[field] = true;
         isValid = false;
       }
+
+
     });
 
     // ✅ NEW EMAIL VALIDATION (any domain allowed)
@@ -1036,7 +1036,7 @@ const Dashboard1 = (props) => {
                 <Select
                   id="campus-select"
                   name="campus"
-                  value={person.campus != null ? String(person.campus) : ""}
+                  value={person.campus == null ? "" : String(person.campus)}
                   onChange={(e) => {
                     const val = e.target.value;
                     handleChange({
@@ -1046,10 +1046,14 @@ const Dashboard1 = (props) => {
                       },
                     });
                   }}
-                  onBlur={handleBlur}
                   displayEmpty
+                  renderValue={(selected) => {
+                    if (selected === "") {
+                      return <em>Select Campus</em>;
+                    }
+                    return selected === "1" ? "MANILA" : "CAVITE";
+                  }}
                 >
-                  {/* Placeholder as first selectable item */}
                   <MenuItem value="">
                     <em>Select Campus</em>
                   </MenuItem>
@@ -1062,6 +1066,7 @@ const Dashboard1 = (props) => {
                   <FormHelperText>This field is required.</FormHelperText>
                 )}
               </FormControl>
+
             </div>
 
 
@@ -1079,7 +1084,7 @@ const Dashboard1 = (props) => {
                   value={person.academicProgram || ""}
                   label="Academic Program"
                   onChange={handleChange}
-                  onBlur={() => handleUpdate(person)}                >
+                  onBlur={() => handleUpdate(person)} >
                   <MenuItem value=""><em>Select Program</em></MenuItem>
                   <MenuItem value="Techvoc">Techvoc</MenuItem>
                   <MenuItem value="Undergraduate">Undergraduate</MenuItem>
@@ -1352,8 +1357,8 @@ const Dashboard1 = (props) => {
                   value={person.middle_name || ""}
                   onChange={handleChange}
                   onBlur={() => handleUpdate(person)} placeholder="Enter your Middle Name"
-                  error={errors.middle_name}
-                  helperText={errors.middle_name ? "This field is required." : ""}
+
+
                 />
               </Box>
 
@@ -1379,9 +1384,7 @@ const Dashboard1 = (props) => {
                     <MenuItem value="IV">IV</MenuItem>
                     <MenuItem value="V">V</MenuItem>
                   </Select>
-                  {errors.extension && (
-                    <FormHelperText>This field is required.</FormHelperText>
-                  )}
+
                 </FormControl>
               </Box>
 
@@ -1396,8 +1399,7 @@ const Dashboard1 = (props) => {
                   value={person.nickname || ""}
                   onChange={handleChange}
                   onBlur={() => handleUpdate(person)} placeholder="Enter your Nickname"
-                  error={errors.nickname}
-                  helperText={errors.nickname ? "This field is required." : ""}
+
                 />
               </Box>
             </Box>
@@ -2016,7 +2018,7 @@ const Dashboard1 = (props) => {
                   required
                   value={person.emailAddress || ""}
                   placeholder="Your registered email"
-           
+
                   InputProps={{
                     readOnly: true,
                   }}

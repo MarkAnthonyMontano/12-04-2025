@@ -1475,7 +1475,7 @@ const ApplicantDashboard = (props) => {
                         ? "✅ Approved by College"
                         : collegeApproval === "Rejected"
                           ? "❌ Rejected by College"
-                          : "⏳ Waiting for College Decision"}
+                          : "⏳ Waiting for College Approval"}
                     </>
                   )}
 

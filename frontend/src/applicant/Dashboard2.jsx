@@ -1634,8 +1634,8 @@ const Dashboard2 = (props) => {
                   value={person.guardian_middle_name || ""}
                   onChange={handleChange}
                   onBlur={() => handleUpdate(person)}
-                  error={!!errors.guardian_middle_name}
-                  helperText={errors.guardian_middle_name ? "This field is required." : ""}
+           
+  
                 />
               </Box>
 
