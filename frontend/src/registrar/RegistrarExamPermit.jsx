@@ -264,7 +264,8 @@ const RegistrarExamPermit = ({ personId }) => {
                 padding: "20px",
                 margin: "0 auto",
                 position: "relative",
-                marginTop: "-20px",
+                marginTop: "20px",
+                border: "2px solid black" ,
                 boxSizing: "border-box",
             }}
         >
@@ -316,7 +317,7 @@ const RegistrarExamPermit = ({ personId }) => {
   }
 `}</style>
 
-            <table width="100%" style={{ borderCollapse: "collapse", marginTop: "-30px", fontFamily: "Arial" }}>
+            <table width="100%" style={{ borderCollapse: "collapse", marginTop: "10px", fontFamily: "Arial", }}>
                 <tbody>
                     <tr>
 
@@ -329,7 +330,7 @@ const RegistrarExamPermit = ({ personId }) => {
                                     marginLeft: "-10px",
                                     width: "140px",
                                     height: "140px",
-
+ 
                                     borderRadius: "50%", // ✅ perfectly circular
                                     objectFit: "cover",
 
@@ -369,7 +370,7 @@ const RegistrarExamPermit = ({ personId }) => {
                             {/* Add spacing here */}
                             <div style={{ marginTop: "30px" }}>
                                 <b style={{ fontSize: "24px", letterSpacing: '1px', fontWeight: "bold" }}>
-                                    EXAMINATION PERMIT
+                                    APPLICANT PROFILE
                                 </b>
                             </div>
                         </td>

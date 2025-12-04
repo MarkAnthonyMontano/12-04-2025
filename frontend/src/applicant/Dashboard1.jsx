@@ -1056,10 +1056,11 @@ const Dashboard1 = (props) => {
                     handleChange({
                       target: {
                         name: "campus",
-                        value: val === "" ? null : parseInt(val, 10),
+                        value: val,
                       },
                     });
                   }}
+
                   displayEmpty
                   renderValue={(selected) => {
                     if (selected === "") {

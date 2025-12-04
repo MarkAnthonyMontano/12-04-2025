@@ -779,7 +779,7 @@ th, td {
 <th style="width: 25%;">Applicant Name</th>
 <th style="width: 13%;">Program</th>
 <th style="width: 10%;">Qualifying Exam Score</th>
-<th style="width: 10%;">Qualifying Interview Score</th>
+<th style="width: 10%;">Interview Exam Score</th>
 <th style="width: 10%;">Total Ave</th>
 <th style="width: 10%;">Status</th>
             </tr>
@@ -1619,7 +1619,7 @@ Thank you, best regards
                             </FormControl>
 
 
-                            <div style={{ position: "relative", zIndex: 999999 }}>
+                            <div style={{ position: "relative" }}>
                                 <button
                                     onClick={() => {
                                         window.location.href = `${API_BASE_URL}/qualifying_interview_template`;
@@ -2223,7 +2223,7 @@ Thank you, best regards
                                 Qualifying Exam Score
                             </TableCell>
                             <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
-                                Qualifying Interview Score
+                                Interview Exam Score
                             </TableCell>
                             <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
                                 Total Ave.

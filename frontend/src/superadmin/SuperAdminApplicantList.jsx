@@ -257,6 +257,45 @@ const SuperAdminApplicantList = () => {
         }
     }, [user]);
 
+
+    const cleanName = (v) => (v ?? "").trim().toLowerCase();
+
+
+    const detectDuplicateNames = (list) => {
+        const map = {};
+
+        for (const p of list) {
+            const ln = cleanName(p.last_name);
+            const fn = cleanName(p.first_name);
+            const mn = cleanName(p.middle_name);
+
+            // Must have all 3 for strict duplicate match
+            if (!ln || !fn || !mn) continue;
+
+            const key = `${ln}|${fn}|${mn}`;
+
+            if (!map[key]) map[key] = 0;
+            map[key]++;
+        }
+
+        return (person) => {
+            const ln = cleanName(person.last_name);
+            const fn = cleanName(person.first_name);
+            const mn = cleanName(person.middle_name);
+
+            if (!ln || !fn || !mn) return false;
+
+            const key = `${ln}|${fn}|${mn}`;
+            return map[key] > 1;
+        };
+    };
+
+
+
+    const isDuplicateApplicant = detectDuplicateNames(persons);
+
+
+
     // Helper to compute applicant status
     const getApplicantStatus = (personData) => {
         const status = (personData.document_status ?? "").trim().toLowerCase();
@@ -495,14 +534,21 @@ const SuperAdminApplicantList = () => {
             const applicantAppliedYear = appliedDate.getFullYear();
 
             const schoolYear = schoolYears.find((sy) => sy.year_id === selectedSchoolYear);
+            // If search is active, allow ALL years
+            const overrideBySearch = searchQuery.trim() !== "";
+
+            // SCHOOL YEAR FILTER
             const matchesSchoolYear =
+                overrideBySearch ||
                 selectedSchoolYear === "" ||
                 (schoolYear && String(applicantAppliedYear) === String(schoolYear.current_year));
 
-            /* 🕒 SEMESTER */
+            // SEMESTER FILTER
             const matchesSemester =
+                overrideBySearch ||
                 selectedSchoolSemester === "" ||
                 String(personData.middle_code) === String(selectedSchoolSemester);
+
 
             /* 📆 FROM–TO DATE RANGE (fixed 100%) */
             let matchesDateRange = true;
@@ -535,6 +581,7 @@ const SuperAdminApplicantList = () => {
                 matchesDateRange
             );
         })
+
 
         /* 🔽 SORTING */
         .sort((a, b) => {
@@ -1514,15 +1561,23 @@ th {
 
                     <TableBody>
                         {currentPersons.map((person, index) => (
-                            <TableRow key={person.person_id}>
+                            <TableRow
+                                key={person.person_id}
+                                sx={{
+                                    backgroundColor: isDuplicateApplicant(person) ? "#FFA50080" : "transparent",
+                                    color: isDuplicateApplicant(person) ? "black" : "inherit",
+                                    fontWeight: isDuplicateApplicant(person) ? "bold" : "normal",
+                                }}
+                            >
                                 {/* # */}
                                 <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
                                     {index + 1}
                                 </TableCell>
 
-                                {/* ✅ Submitted Checkbox */}
+                                {/* Submitted Checkbox */}
                                 <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
                                     <Checkbox
+
                                         checked={Number(person.submitted_documents) === 1}
                                         onChange={(e) => {
                                             const checked = e.target.checked;
@@ -1530,7 +1585,6 @@ th {
                                                 `Are you sure you want to mark this applicant’s Original Documents as ${checked ? "Submitted" : "Unsubmitted"}?`
                                             );
                                             setConfirmAction(() => async () => {
-                                                // Optimistic UI update
                                                 setPersons((prev) =>
                                                     prev.map((p) =>
                                                         p.person_id === person.person_id
@@ -1538,7 +1592,6 @@ th {
                                                             : p
                                                     )
                                                 );
-                                                // Call backend
                                                 await handleSubmittedDocumentsChange(
                                                     person.upload_id,
                                                     checked,
@@ -1556,12 +1609,11 @@ th {
                                     />
                                 </TableCell>
 
-                                {/* Applicant Number */}
+                                {/* Applicant ID */}
                                 <TableCell
                                     sx={{
                                         textAlign: "center",
                                         border: `2px solid ${borderColor}`,
-                                        color: "blue",
                                         cursor: "pointer",
                                     }}
                                     onClick={() => handleRowClick(person.person_id)}
@@ -1569,12 +1621,11 @@ th {
                                     {person.applicant_number ?? "N/A"}
                                 </TableCell>
 
-                                {/* Applicant Name */}
+                                {/* Name */}
                                 <TableCell
                                     sx={{
                                         textAlign: "left",
                                         border: `2px solid ${borderColor}`,
-                                        color: "blue",
                                         cursor: "pointer",
                                     }}
                                     onClick={() => handleRowClick(person.person_id)}
@@ -1584,10 +1635,7 @@ th {
 
                                 {/* Program */}
                                 <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
-                                    {curriculumOptions.find(
-                                        (item) =>
-                                            item.curriculum_id?.toString() === person.program?.toString()
-                                    )?.program_code ?? "N/A"}
+                                    {person.program_code || ""}
                                 </TableCell>
 
                                 {/* SHS GWA */}
@@ -1595,11 +1643,12 @@ th {
                                     {person.generalAverage1}
                                 </TableCell>
 
+                                {/* Strand */}
                                 <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
                                     {person.strand}
                                 </TableCell>
 
-                                {/* Created Date */}
+                                {/* Date Applied */}
                                 <TableCell
                                     sx={{ textAlign: "center", border: `2px solid ${borderColor}`, fontSize: "12px" }}
                                 >
@@ -1618,20 +1667,19 @@ th {
                                     })()}
                                 </TableCell>
 
-
-
                                 {/* Status */}
                                 <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
                                     {getApplicantStatus(person)}
                                 </TableCell>
 
-
+                                {/* Docs Button */}
                                 <TableCell
                                     sx={{
                                         border: `2px solid ${borderColor}`,
                                         textAlign: "center",
-                                        verticalAlign: "middle",   // 🔑 force cell content to middle
+                                        verticalAlign: "middle",
                                         p: 0,
+                                        backgroundColor: "white"
                                     }}
                                 >
                                     <Box
@@ -1639,8 +1687,8 @@ th {
                                             display: "flex",
                                             justifyContent: "center",
                                             alignItems: "center",
-                                            height: "100%",          // fill full cell height
-                                            minHeight: "42px",       // 🔑 uniform height para lahat pantay
+                                            height: "100%",
+                                            minHeight: "42px",
                                         }}
                                     >
                                         <Button
@@ -1693,71 +1741,6 @@ th {
                                         </Button>
                                     </Box>
                                 </TableCell>
-
-
-
-                                {/*
-                                <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
-                                    {person.registrar_status === 1 ? (
-                                        <Box
-                                            sx={{
-                                                background: "#4CAF50",
-                                                color: "white",
-                                                borderRadius: 1,
-                                                p: 0.5,
-                                            }}
-                                        >
-                                            <Typography sx={{ fontWeight: "bold" }}>Submitted</Typography>
-                                        </Box>
-                                    ) : person.registrar_status === 0 ? (
-                                        <Box
-                                            sx={{
-                                                background: "#F44336",
-                                                color: "white",
-                                                borderRadius: 1,
-                                                p: 0.5,
-                                            }}
-                                        >
-                                            <Typography sx={{ fontWeight: "bold" }}>
-                                                Unsubmitted / Incomplete
-                                            </Typography>
-                                        </Box>
-                                    ) : (
-                                        <Box display="flex" justifyContent="center" gap={1}>
-                                            <Button
-                                                variant="contained"
-                                                onClick={() => {
-                                                    setConfirmMessage(
-                                                        "Are you sure you want to set Registrar Status to Submitted?"
-                                                    );
-                                                    setConfirmAction(() => async () => {
-                                                        await handleRegistrarStatusChange(person.person_id, 1);
-                                                    });
-                                                    setConfirmOpen(true);
-                                                }}
-                                                sx={{ backgroundColor: "green", color: "white" }}
-                                            >
-                                                Submitted
-                                            </Button>
-                                            <Button
-                                                variant="contained"
-                                                onClick={() => {
-                                                    setConfirmMessage(
-                                                        "Are you sure you want to set Registrar Status to Unsubmitted?"
-                                                    );
-                                                    setConfirmAction(() => async () => {
-                                                        await handleRegistrarStatusChange(person.person_id, 0);
-                                                    });
-                                                    setConfirmOpen(true);
-                                                }}
-                                                sx={{ backgroundColor: "red", color: "white" }}
-                                            >
-                                                Unsubmitted
-                                            </Button>
-                                        </Box>
-                                    )}
-                                </TableCell>
-                                */}
                             </TableRow>
                         ))}
                     </TableBody>

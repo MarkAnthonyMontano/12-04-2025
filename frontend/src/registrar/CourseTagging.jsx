@@ -1088,7 +1088,7 @@ const CourseTagging = () => {
       >
 
         {/* LEFT SIDE — Download Template */}
-        <div style={{ position: "relative"}}>
+        <div style={{ position: "relative" }}>
           <button
             onClick={() => {
               window.location.href = `${API_BASE_URL}/grade_report_template`;
@@ -1102,12 +1102,12 @@ const CourseTagging = () => {
               cursor: "pointer",
               fontSize: "14px",
               fontWeight: "bold",
-              height: "50px",
+              height: "40px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
               gap: "8px",
               width: "225px",
+              pointerEvents: "auto",
             }}
           >
             📥 Download Template

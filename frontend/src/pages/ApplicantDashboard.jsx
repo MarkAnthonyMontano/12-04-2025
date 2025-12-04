@@ -30,6 +30,7 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 import { Dialog } from "@mui/material";
 import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
 import API_BASE_URL from "../apiConfig";
+import { useParams } from "react-router-dom";
 const ApplicantDashboard = (props) => {
 
 
@@ -92,6 +93,8 @@ const ApplicantDashboard = (props) => {
   const [proctor, setProctor] = useState(null);
   const [applicantNumber, setApplicantNumber] = useState(null);
 
+  const { person_id: paramId } = useParams();
+  const person_id = paramId || localStorage.getItem("person_id");
 
   useEffect(() => {
     const storedUser = localStorage.getItem("email");
@@ -115,6 +118,13 @@ const ApplicantDashboard = (props) => {
   }, []);
 
   const [medicalUploads, setMedicalUploads] = useState([]);
+
+  useEffect(() => {
+    if (person_id) {
+      fetchDocumentsStatus();
+    }
+  }, [person_id]);
+
 
   const fetchMedicalUploads = async (personId) => {
     try {
@@ -471,6 +481,50 @@ const ApplicantDashboard = (props) => {
   const handlePrevMonth = () => setDate(new Date(year, month - 1, 1));
   const handleNextMonth = () => setDate(new Date(year, month + 1, 1));
 
+  const [docsCompleted, setDocsCompleted] = useState(false);
+
+  const fetchDocumentsStatus = async () => {
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/api/applicant_uploaded_requirements/${person_id}`
+      );
+
+      const rows = res.data;
+
+      if (!rows || rows.length === 0) {
+        setDocsCompleted(false);
+        return;
+      }
+
+      // Only check rows that actually have file_path (meaning uploaded)
+      const uploaded = rows.filter((doc) => doc.file_path !== null);
+
+      // Total required = how many requirement IDs exist in DB for this person
+      const totalRequired = rows.length;
+
+      // How many are submitted
+      const submittedCount = uploaded.filter(
+        (doc) => Number(doc.submitted_documents) === 1
+      ).length;
+
+      // Completed if uploaded == required
+      const allSubmitted = submittedCount === totalRequired;
+
+      setDocsCompleted(allSubmitted);
+
+      // Auto-tag Document Verified
+      if (allSubmitted) {
+        setPerson((prev) => ({
+          ...prev,
+          document_status: "Documents Verified & ECAT",
+        }));
+      }
+
+    } catch (err) {
+      console.error("❌ Failed fetching document status:", err);
+    }
+  };
+
 
   const stepIcons = {
     0: <DescriptionIcon />,
@@ -481,43 +535,55 @@ const ApplicantDashboard = (props) => {
     5: <PersonIcon />,
   };
 
-  const getCurrentStep = () => {
-    // STEP 6 – Final status reached
-    if (person?.final_status === "Accepted" || person?.final_status === "Rejected") return 5;
+const getCurrentStep = () => {
+  const applicantNumber = person?.applicant_number;
 
-    // STEP 5 – Medical submitted
-    if (medicalUploads.length > 0) return 4;
+  // STEP 6 — Applicant Status (Accepted or Has Applicant Number)
+  if (applicantNumber && applicantNumber !== "") {
+    return 5;
+  }
 
-    // STEP 4 – College approval received
-    if (collegeApproval === "Accepted" || collegeApproval === "Rejected") return 3;
+  // STEP 5 — Medical Submitted
+  if (medicalUploads.length > 0) {
+    return 4;
+  }
 
-    // STEP 3 – Interview step: requires schedule AND scores with actual values
-    if (
-      interviewSchedule &&
-      interviewSchedule.day_description &&
-      interviewSchedule.start_time &&
-      interviewSchedule.end_time &&
-      hasInterviewScores &&
-      typeof qualifyingInterviewScore === "number"
-    ) return 2;
+  // STEP 4 — College Approval
+  if (collegeApproval === "Accepted" || collegeApproval === "Rejected") {
+    return 3;
+  }
 
-    // STEP 2 – Exam step: requires schedule AND scores AND status
-    if (
-      hasSchedule &&
-      hasSchedule.day_description &&
-      hasSchedule.start_time &&
-      hasSchedule.end_time &&
-      hasScores &&
-      examScores?.status
-    ) return 1;
+  // STEP 3 — Interview + Scores
+  if (
+    interviewSchedule &&
+    interviewSchedule.day_description &&
+    interviewSchedule.start_time &&
+    interviewSchedule.end_time &&
+    hasInterviewScores &&
+    typeof qualifyingInterviewScore === "number"
+  ) {
+    return 2;
+  }
 
-    // STEP 1 – Documents verified
-    if (person?.document_status === "Documents Verified & ECAT") return 0;
+  // STEP 2 — Exam Schedule + Scores
+  if (
+    hasSchedule &&
+    hasSchedule.day_description &&
+    hasSchedule.start_time &&
+    hasSchedule.end_time &&
+    hasScores &&
+    examScores?.status
+  ) {
+    return 1;
+  }
 
-    // Default
+  // STEP 1 — Documents Verified
+  if (docsCompleted || person?.document_status === "Documents Verified & ECAT") {
     return 0;
-  };
+  }
 
+  return 0;
+};
 
   const activeStep = getCurrentStep();
 
@@ -1503,13 +1569,17 @@ const ApplicantDashboard = (props) => {
                   )}
 
 
-
                   {/* Step 5: Medical Submitted */}
                   {index === 4 && (
                     <>
-                      ⏳ Apply For Medical Processing
+                      {docsCompleted ? (
+                        "⬇️ Your documents have been verified. Please proceed to your respective college to finalize your schedule and subjects."
+                      ) : (
+                        "⏳ Please proceed to the Medical and Dental Services."
+                      )}
                     </>
                   )}
+
 
 
 

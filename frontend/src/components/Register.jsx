@@ -70,15 +70,6 @@ const Register = () => {
   const handleRegister = async () => {
     if (isSubmitting) return;
 
-    // ✅ Gmail-only validation
-    if (!usersData.email.endsWith("@gmail.com")) {
-      setSnack({
-        open: true,
-        message: "Only Gmail addresses are allowed!",
-        severity: "error",
-      });
-      return;
-    }
 
     // ✅ Password match check
     if (usersData.password !== confirmPassword) {
