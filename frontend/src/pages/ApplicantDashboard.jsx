@@ -1442,6 +1442,7 @@ const getCurrentStep = () => {
                     p: 2,
                     overflowY: "auto",
                     fontSize: "13px",
+                        backgroundColor: "#fff9ec",
                     transition: "transform 0.2s ease",
                     boxShadow: 3,
                     "&:hover": { transform: "scale(1.03)" },
@@ -1575,7 +1576,7 @@ const getCurrentStep = () => {
                       {docsCompleted ? (
                         "⬇️ Your documents have been verified. Please proceed to your respective college to finalize your schedule and subjects."
                       ) : (
-                        "⏳ Please proceed to the Medical and Dental Services."
+                        "⏳ Apply For Medical Processing"
                       )}
                     </>
                   )}
