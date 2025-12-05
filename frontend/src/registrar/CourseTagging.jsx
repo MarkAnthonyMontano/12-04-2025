@@ -1658,7 +1658,7 @@ const CourseTagging = () => {
                       border: `2px solid ${borderColor}`,
                     }}
                   >
-                    {e.course_unit}
+                 {e.course_unit}
                   </TableCell>
                   <TableCell
                     style={{

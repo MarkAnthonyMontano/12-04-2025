@@ -668,7 +668,7 @@ const AssignScheduleToApplicantsInterviewer = () => {
 
         // Prefill the email message
         setEmailMessage(
-            `Dear ${fullName},
+            `Dear ${first.last_name || ""}, ${first.first_name || ""} ${first.middle_name || ""},
 
             You are scheduled for an interview on:
 

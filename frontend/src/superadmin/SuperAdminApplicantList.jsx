@@ -1071,8 +1071,8 @@ th {
                                 }}
                             >
                                 <MenuItem value=""><em>All Campuses</em></MenuItem>
-                                <MenuItem value="0">MANILA</MenuItem>
-                                <MenuItem value="1">CAVITE</MenuItem>
+                                <MenuItem value="1">MANILA</MenuItem>
+                                <MenuItem value="2">CAVITE</MenuItem>
                             </Select>
                         </FormControl>
                     </Box>

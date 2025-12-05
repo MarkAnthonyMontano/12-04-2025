@@ -1010,7 +1010,7 @@ th, td {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-       return <LoadingOverlay open={loading} message="Loading..." />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {
@@ -1260,8 +1260,8 @@ th, td {
                                     }}
                                 >
                                     <MenuItem value=""><em>All Campuses</em></MenuItem>
-                                    <MenuItem value="0">MANILA</MenuItem>
-                                    <MenuItem value="1">CAVITE</MenuItem>
+                                    <MenuItem value="1">MANILA</MenuItem>
+                                    <MenuItem value="2">CAVITE</MenuItem>
                                 </Select>
                             </FormControl>
                         </Box>
@@ -1836,12 +1836,11 @@ th, td {
                                     >
                                         <Button
                                             variant="contained"
-                                            color="success"
-                                            size="small"
+                                            color="primary"
                                             onClick={() => saveSingleRow(person)}
                                             disabled={saving}
                                         >
-                                            Save Row
+                                            Save
                                         </Button>
                                     </TableCell>
                                 </TableRow>

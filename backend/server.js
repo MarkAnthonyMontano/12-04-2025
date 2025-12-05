@@ -588,8 +588,8 @@ app.post("/register", async (req, res) => {
     );
 
     // QR Codes
-    const qrData = `${ipAddress}/examination_profile/${applicant_number}`;
-    const qrData2 = `${ipAddress}/applicant_profile/${applicant_number}`;
+    const qrData = `192.168.86.123:5173/examination_profile/${applicant_number}`;
+    const qrData2 = `192.168.86.123:5173/applicant_profile/${applicant_number}`;
     const qrFilename = `${applicant_number}_qrcode.png`;
     const qrFilename2 = `${applicant_number}_qrcode2.png`;
     const qrPath = path.join(__dirname, "uploads", qrFilename);
@@ -5038,7 +5038,7 @@ app.post("/login_applicant", async (req, res) => {
       );
 
       // Generate QR code
-      const qrData = `${ipAddress}/examination_profile/${applicantNumber}`;
+      const qrData = `192.168.86.123:5173/examination_profile/${applicantNumber}`;
       qrFilename = `${applicantNumber}_qrcode.png`;
       const qrPath = path.join(__dirname, "uploads", qrFilename);
 
@@ -6438,7 +6438,7 @@ Your temporary password is: ${tempPassword}
 You may change your password and keep it secure.
 
 👉 Click the link below to log in:
-${ipAddress}/login
+192.168.86.123:5173/login
 `.trim(),
       };
 
@@ -13108,40 +13108,32 @@ app.post("/api/grades/import", upload.single("file"), async (req, res) => {
   }
 });
 
+app.get("/api/section_assigned_to/:userID/:courseID/:yearID/:semesterID", async (req, res) => {
+  const { userID, courseID, yearID, semesterID } = req.params;
 
-
-
-app.get("/api/section_assigned_to/:userID", async (req, res) => {
-  const { userID } = req.params;
   try {
     const [rows] = await db3.execute(`
       SELECT DISTINCT
-		    st.id AS section_id,
+        t.department_section_id,
         st.description AS section_description,
-        pgt.program_code,
-        yt.year_id,
-        smt.semester_id
+        pgt.program_code
       FROM time_table t
-      JOIN room_day_table d ON d.id = t.room_day
       INNER JOIN active_school_year_table asy ON t.school_year_id = asy.id
-      INNER JOIN dprtmnt_section_table AS dst ON t.department_section_id = dst.id
-      INNER JOIN section_table AS st ON dst.section_id = st.id
-      INNER JOIN curriculum_table AS cct ON dst.curriculum_id = cct.curriculum_id
-      INNER JOIN program_table AS pgt ON cct.program_id = pgt.program_id
-      INNER JOIN prof_table AS pft ON t.professor_id = pft.prof_id
-      INNER JOIN year_table AS yt ON asy.year_id = yt.year_id
-      INNER JOIN semester_table AS smt ON asy.semester_id = smt.semester_id 
+      INNER JOIN dprtmnt_section_table dst ON t.department_section_id = dst.id
+      INNER JOIN section_table st ON dst.section_id = st.id
+      INNER JOIN curriculum_table cct ON dst.curriculum_id = cct.curriculum_id
+      INNER JOIN program_table pgt ON cct.program_id = pgt.program_id
+      INNER JOIN prof_table pft ON t.professor_id = pft.prof_id
       WHERE pft.person_id = ?
-    `, [userID]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({ error: "No Section data found" });
-    }
+      AND t.course_id = ?
+      AND asy.year_id = ?
+      AND asy.semester_id = ?
+    `, [userID, courseID, yearID, semesterID]);
 
     res.json(rows);
   } catch (error) {
-    console.error("Error fetching curriculum data:", error);
-    res.status(500).json({ error: "Database error" });
+    console. Error("Error:", error);
+    res.status(500).json({ error: "Database Error" });
   }
 });
 
@@ -16957,6 +16949,7 @@ app.get("/get_enrollment_statistic", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 //----------------------------prereq end
 

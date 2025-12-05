@@ -94,7 +94,7 @@ const LoadingOverlay = ({ open, message }) => {
           animation: "pulse 1.3s infinite",
         }}
       >
-        {message || `${companyName} is loading...`}
+        {message || `Loading...`}
       </Typography>
 
       <style>

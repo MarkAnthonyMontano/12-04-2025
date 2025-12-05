@@ -168,20 +168,21 @@ const FacultyMasterList = () => {
   }, [course_id, section_id, school_year_id]);
 
   useEffect(() => {
-    if (userID) {
-      axios
-        .get(`${API_BASE_URL}/api/section_assigned_to/${userID}`)
-        .then((res) => {
-          setSectionAssignedTo(res.data);
-          if (res.data.length > 0) {
-            setSelectedSection(res.data[0].department_section_id);
-          } else {
-            setSelectedSection("");
-          }
-        })
-        .catch((err) => console.error(err));
-    }
-  }, [userID]);
+  if (!userID || !selectedCourse || !selectedSchoolYear || !selectedSchoolSemester) return;
+    axios
+      .get(`${API_BASE_URL}/api/section_assigned_to/${userID}/${selectedCourse}/${selectedSchoolYear}/${selectedSchoolSemester}`)
+      .then((res) => {
+        setSectionAssignedTo(res.data);
+
+        if (res.data.length > 0) {
+          setSelectedSection(res.data[0].department_section_id);
+          handleFetchStudents(res.data[0].department_section_id);
+        } else {
+          setSelectedSection("");
+        }
+      })
+      .catch((err) => console.error(err));
+  }, [userID, selectedCourse, selectedSchoolYear, selectedSchoolSemester]);
 
   useEffect(() => {
     axios

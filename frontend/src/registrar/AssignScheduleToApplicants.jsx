@@ -1059,7 +1059,7 @@ const AssignScheduleToApplicants = () => {
           <Box display="flex" alignItems="center" gap={2}>
 
             {/* NEW Cancel Button BEFORE Assign Max */}
-            <Button
+            {/* <Button
               variant="contained"
               sx={{
                 backgroundColor: "#8B0000",
@@ -1081,7 +1081,7 @@ const AssignScheduleToApplicants = () => {
               }}
             >
               Reject All
-            </Button>
+            </Button> */}
 
             {/* Assign Max */}
             <Button
@@ -1512,9 +1512,8 @@ const AssignScheduleToApplicants = () => {
                       {!isAssigned ? (
                         // ✅ Not assigned → Assign only
                         <Button
-                          variant="outlined"
-                          color="success"
-                          size="small"
+                                variant="contained"
+                            color="primary"
                           onClick={() => handleAssignSingle(id)} // new helper for 1 applicant
                         >
                           Assign

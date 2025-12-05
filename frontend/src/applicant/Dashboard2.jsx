@@ -308,7 +308,7 @@ const Dashboard2 = (props) => {
 
     // Guardian fields always required:
     requiredFields.push(
-      "guardian", "guardian_family_name", "guardian_given_name", "guardian_middle_name", "guardian_address", "guardian_contact"
+      "guardian", "guardian_family_name", "guardian_given_name", "guardian_address", "guardian_contact"
     );
 
     // Annual income always required:
@@ -1600,6 +1600,7 @@ const Dashboard2 = (props) => {
                   <MenuItem value="Father in Law">Father-in-law</MenuItem>
                   <MenuItem value="Mother in Law">Mother-in-law</MenuItem>
                   <MenuItem value="Sister in Law">Sister-in-law</MenuItem>
+                  <MenuItem value="Sister in Law">Brother-in-law</MenuItem>
                   <MenuItem value="GrandMother">GrandMother</MenuItem>
                   <MenuItem value="GrandFather">GrandFather</MenuItem>
                   <MenuItem value="Spouse">Spouse</MenuItem>

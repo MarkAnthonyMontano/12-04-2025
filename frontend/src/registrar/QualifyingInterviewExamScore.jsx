@@ -118,14 +118,14 @@ const QualifyingExamScore = () => {
     };
 
     const tabs = [
-      { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
-      { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
-      { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-      { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
-      { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
-      { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
-      { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <SearchIcon fontSize="large" /> },
-  
+        { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
+        { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
+        { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
+        { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
+        { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
+        { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
+        { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <SearchIcon fontSize="large" /> },
+
 
 
     ];
@@ -147,6 +147,95 @@ const QualifyingExamScore = () => {
             navigate(to);
         }
     };
+
+
+    const buildPayload = (person) => {
+        const edits = editScores[person.person_id] || {};
+
+        return {
+            applicant_number: person.applicant_number,
+            qualifying_exam_score: edits.qualifying_exam_score ?? person.qualifying_exam_score ?? 0,
+            qualifying_interview_score: edits.qualifying_interview_score ?? person.qualifying_interview_score ?? 0,
+            user_person_id: userID
+        };
+    };
+
+    const saveSingleRow = async (person) => {
+        try {
+            setLoading(true);
+
+            const payload = buildPayload(person);
+            const res = await axios.post(`${API_BASE_URL}/api/interview/save`, payload);
+
+            if (!res.data?.success) {
+                throw new Error(res.data?.error || "Saving failed");
+            }
+
+            const qExam = Number(payload.qualifying_exam_score);
+            const qInterview = Number(payload.qualifying_interview_score);
+            const finalRating = (qExam + qInterview) / 2;
+
+            // 🔥 Update UI instantly
+            setPersons(prev =>
+                prev.map(p =>
+                    p.person_id === person.person_id
+                        ? {
+                            ...p,
+                            qualifying_exam_score: qExam,
+                            qualifying_interview_score: qInterview,
+                            final_rating: finalRating
+                        }
+                        : p
+                )
+            );
+
+            // 🧹 Clear edit buffer
+            setEditScores(prev => {
+                const copy = { ...prev };
+                delete copy[person.person_id];
+                return copy;
+            });
+
+            setSnack({ open: true, message: "Score saved!", severity: "success" });
+
+        } catch (err) {
+            console.error(err);
+            setSnack({
+                open: true,
+                message: "Save failed: " + (err.response?.data?.error || err.message),
+                severity: "error"
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveAllRows = async () => {
+        try {
+            setLoading(true);
+
+            for (const person of persons) {
+                const payload = buildPayload(person);
+                await axios.post(`${API_BASE_URL}/api/interview/save`, payload);
+            }
+
+            // Refresh table from DB for safety
+            await fetchApplicants();
+
+            setSnack({ open: true, message: "All scores saved!", severity: "success" });
+
+        } catch (err) {
+            console.error(err);
+            setSnack({
+                open: true,
+                message: "Save All failed: " + (err.response?.data?.error || err.message),
+                severity: "error"
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
 
     const [persons, setPersons] = useState([]);
@@ -1490,7 +1579,7 @@ Thank you, best regards
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-       return <LoadingOverlay open={loading} message="Loading..." />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {
@@ -2139,6 +2228,15 @@ Thank you, best regards
                         <Box display="flex" gap={2} alignItems="center">
                             <Button
                                 variant="contained"
+                                color="primary"
+                                onClick={saveAllRows}
+                                sx={{ minWidth: 150 }}
+                            >
+                                SAVE ALL SCORES
+                            </Button>
+
+                            <Button
+                                variant="contained"
                                 color="secondary"
                                 onClick={handleAssignMax}
                                 sx={{ minWidth: 150 }}
@@ -2234,8 +2332,13 @@ Thank you, best regards
                                 Status
                             </TableCell>
                             <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
+                                Assign
+                            </TableCell>
+
+                            <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
                                 Date
                             </TableCell>
+
                             <TableCell sx={{ color: "white", textAlign: "center", width: "10%", py: 0.5, fontSize: "12px", border: `2px solid ${borderColor}` }}>
                                 Action
                             </TableCell>
@@ -2347,24 +2450,6 @@ Thank you, best regards
 
 
 
-
-                                    <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center", fontSize: "13px", }}>
-                                        {(() => {
-                                            if (!person.created_at) return "";
-
-                                            const date = new Date(person.created_at + "T00:00:00");
-
-                                            if (isNaN(date)) return person.created_at;
-
-                                            return date.toLocaleDateString("en-US", {
-                                                year: "numeric",
-                                                month: "long",
-                                                day: "numeric",
-                                            });
-                                        })()}
-                                    </TableCell>
-
-
                                     <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center", fontSize: "13px", }}>
                                         {person.interview_status === "Accepted" ? (
                                             <Box
@@ -2406,7 +2491,36 @@ Thank you, best regards
 
                                         )}
                                     </TableCell>
+                                    <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center", fontSize: "13px", }}>
+                                        {(() => {
+                                            if (!person.created_at) return "";
 
+                                            const date = new Date(person.created_at + "T00:00:00");
+
+                                            if (isNaN(date)) return person.created_at;
+
+                                            return date.toLocaleDateString("en-US", {
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric",
+                                            });
+                                        })()}
+                                    </TableCell>
+
+
+
+                                    <TableCell sx={{ border: `2px solid ${borderColor}`, textAlign: "center", fontSize: "13px", }}>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            size="small"
+                                            sx={{ width: "100px", height: "35px" }}
+                                            onClick={() => saveSingleRow(person)}
+                                        >
+                                            SAVE
+                                        </Button>
+
+                                    </TableCell>
 
 
                                 </TableRow>
