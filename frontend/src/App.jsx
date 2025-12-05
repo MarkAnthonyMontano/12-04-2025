@@ -212,6 +212,7 @@ import API_BASE_URL from "./apiConfig";
 export const SettingsContext = createContext(null);
 
 function App() {
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [settings, setSettings] = useState(null);
   const [profileImage, setProfileImage] = useState(null);

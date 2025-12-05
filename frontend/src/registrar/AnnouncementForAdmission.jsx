@@ -217,7 +217,7 @@ const AnnouncementPanel = () => {
         setImage(null);
     };
 
-    if (loading || hasAccess === null) return <LoadingOverlay open={loading} message="Check Access" />;
+    if (loading || hasAccess === null)return <LoadingOverlay open={loading} message="Loading..." />;
     if (!hasAccess) return <Unauthorized />;
 
     return (

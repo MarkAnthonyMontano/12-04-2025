@@ -22,7 +22,7 @@ import GroupIcon from "@mui/icons-material/Groups";
 import SchoolIcon from "@mui/icons-material/School";
 import PersonIcon from "@mui/icons-material/Person";
 import { ArrowBackIos, ArrowForwardIos } from "@mui/icons-material";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell, Legend, PieChart, Pie } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, Cell, Legend, PieChart, Pie } from "recharts";
 import { Tooltip } from "recharts";
 import MuiTooltip from "@mui/material/Tooltip";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
@@ -455,31 +455,36 @@ const Dashboard = ({ profileImage, setProfileImage }) => {
       })
       .catch((err) => console.error(err));
   }, []);
-  
-useEffect(() => {
-  axios.get(`${API_BASE_URL}/get_enrollment_statistic`)
-    .then((res) => {
-      console.log("📌 Enrollment API Response:", res.data);
-      setData(res.data);
-    })
-    .catch((err) => console.error("❌ Enrollment Fetch Error:", err));
-}, []);
 
- 
+  useEffect(() => {
+    axios
+      .get(`${API_BASE_URL}/get_enrollment_statistic`, {
+        params: { year: selectedYear },
+      })
+      .then(res => {
+        console.log("Enrollment Data:", res.data);
+        setData(res.data);
+      })
+      .catch(err => console.error(err));
+  }, [selectedYear]); // Re-run whenever selectedYear changes
+
 
 
   const enrollmentCOLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA336A", "#3366AA"];
 
-  if (!data) return <Typography>Loading...</Typography>;
+  if (!data || Object.keys(data).length === 0) {
+    return <Typography>Loading...</Typography>;
+  }
 
   const enrollmentData = [
-    { name: "Techvoc", value: data.Techvoc },
-    { name: "Graduate", value: data.Graduate },
-    { name: "Returnee", value: data.Returnee },
-    { name: "Shiftee", value: data.Shiftee },
-    { name: "Foreign Student", value: data.ForeignStudent },
-    { name: "Transferee", value: data.Transferee },
+    { name: "Techvoc", value: Number(data.Techvoc) || 0 },
+    { name: "Graduate", value: Number(data.Graduate) || 0 },
+    { name: "Returnee", value: Number(data.Returnee) || 0 },
+    { name: "Shiftee", value: Number(data.Shiftee) || 0 },
+    { name: "Foreign Student", value: Number(data.ForeignStudent) || 0 },
+    { name: "Transferee", value: Number(data.Transferee) || 0 },
   ];
+
 
   return (
     <Box
@@ -890,12 +895,12 @@ useEffect(() => {
         <Grid item xs={12} md={4}>
           <Card
             sx={{
-              width: 550,
+              width: 600,
               height: 700,
               p: 3,
               borderRadius: 3,
               marginTop: "-45px",
-              marginLeft: "-5.5rem",
+              marginLeft: "-6rem",
               boxShadow: 3,
               border: `2px solid ${borderColor}`,
               background: "#ffffff",
@@ -914,7 +919,7 @@ useEffect(() => {
             </Typography>
 
             {/* Year Select */}
-            <FormControl fullWidth size="small" sx={{ mb: 3, width: 500 }}>
+            <FormControl fullWidth size="small" sx={{ mb: 3, width: 548 }}>
               <InputLabel>School Year</InputLabel>
               <Select
                 value={selectedYear}
@@ -928,66 +933,69 @@ useEffect(() => {
                 ))}
               </Select>
             </FormControl>
+
+            <Box sx={{ flex: 1, display: "flex", gap: 1 }}>
+              {enrollmentData.map((entry, idx) => (
+                <Box
+                  key={idx}
+                  sx={{
+                    width: 86,
+                    height: 90,
+                    p: 2,
+                    backgroundColor: "#fef9e1",
+                    borderRadius: 2,
+                    textAlign: "center",
+                    border: "2px solid black"
+                  }}
+                >
+                  <Typography variant="h5" fontWeight="bold">
+                    {entry.value}
+                  </Typography>
+                  <Typography fontSize={11.5}>{entry.name}</Typography>
+                </Box>
+              ))}
+            </Box>
             {/* Main Content: PIE + Stats */}
             <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1, gap: 2 }}>
               {/* PIE Graph */}
               <Box
                 sx={{
                   minWidth: 450,
-                  minHeight: 440,
+                  minHeight: 430,
                   flex: 1,
+                  mt: 2,
+
                   background: "#f1f3f4",
                   borderRadius: 3,
-                  border: "1px dashed #bfc4cc",
+                  border: "2px solid black",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={enrollmentData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={120}
-                      fill="#8884d8"
-                      label
-                    >
-                      {enrollmentData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={enrollmentCOLORS[index % enrollmentCOLORS.length]} />
-                      ))}
-                    </Pie>
+                  <LineChart data={enrollmentData} margin={{ top: 20, right: 30, left: 0, bottom: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis allowDecimals={false} />
                     <Tooltip />
                     <Legend />
-                  </PieChart>
+
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke={mainButtonColor}
+                      strokeWidth={3}
+                      dot={{ r: 6 }}
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
+
               </Box>
 
               {/* Column Stats */}
-              <Box sx={{ flex: 1, display: "flex", gap: 2 }}>
-                {enrollmentData.map((entry, idx) => (
-                  <Box
-                    key={idx}
-                    sx={{
-                      width: 125,
-                      height: 90,
-                      p: 2,
-                      backgroundColor: "#fef9e1",
-                      borderRadius: 2,
-                      textAlign: "center",
-                      border: "2px solid black"
-                    }}
-                  >
-                    <Typography variant="h5" fontWeight="bold">
-                      {entry.value}
-                    </Typography>
-                    <Typography fontSize={14}>{entry.name}</Typography>
-                  </Box>
-                ))}
-              </Box>
+
             </Box>
           </Card>
         </Grid>
@@ -996,8 +1004,8 @@ useEffect(() => {
           <Card
             sx={{
               marginTop: "-45px",
-              marginLeft: "-2rem",
-              width: 520,
+              marginLeft: ".5rem",
+              width: 495,
               height: 700,
               p: 3,
               borderRadius: 3,
@@ -1122,7 +1130,7 @@ useEffect(() => {
                 background: "#f1f3f4",
                 border: "2px solid black",
                 borderRadius: 3,
-                border: "1px dashed #bfc4cc",
+                border: "2px solid black",
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",

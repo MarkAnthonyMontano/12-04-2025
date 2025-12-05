@@ -707,7 +707,7 @@ const AdmissionOfficerDashboard = ({ profileImage, setProfileImage }) => {
   }, []);
 
   if (loading || hasAccess === null)
-    return <LoadingOverlay open={loading} message="Checking Access..." />;
+   return <LoadingOverlay open={loading} message="Loading..." />;
 
   if (!hasAccess) return <Unauthorized />;
 

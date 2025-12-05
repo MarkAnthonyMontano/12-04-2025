@@ -1,22 +1,142 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="/EaristLogo.png" type="image/svg+xml" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-    <title>EARIST - Manila </title>
-  </head>
-  <body>
-    <style>
-      #root{
-        width: 100%;
-        height: 100vh;
-        overflow: hidden;
-        background-color: white;
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/EaristLogo.png" type="image/svg+xml" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <title>EARIST - Manila</title>
+</head>
+
+<body>
+
+  <!-- 🔥 STARTUP LOADER (Now perfectly matches React LoadingOverlay) -->
+  <div id="startup-loader">
+    <div class="loader-wrapper">
+      <div class="loader-circle"></div>
+
+      <img src="/EaristLogo.png" class="loader-logo" />
+    </div>
+
+    <div class="loader-text">Loading...</div>
+  </div>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-image: url("/default-bg.jpg");
+      background-size: cover;
+      background-position: center;
+    }
+
+    #startup-loader {
+      position: fixed;
+      inset: 0;
+      background-color: #fff9ec;
+
+      backdrop-filter: blur(6px);
+      /* stronger blur */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .loader-wrapper {
+      position: relative;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* ⭐ MUCH BIGGER LOADING CIRCLE */
+    .loader-circle {
+      width: 160px;
+      /* was 120 */
+      height: 160px;
+      /* was 120 */
+      border: 8px solid rgba(163, 29, 29, 0.3);
+      /* stronger */
+      border-top-color: #A31D1D;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      /* slightly faster */
+    }
+
+    /* ⭐ BIGGER LOGO INSIDE THE LOADER */
+    .loader-logo {
+      position: absolute;
+      width: 120px;
+      /* was 90 */
+      height: 120px;
+      /* was 90 */
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(163, 29, 29, 0.6);
+      /* stronger glow */
+      animation: heartbeat 1.5s ease-in-out infinite;
+    }
+
+    /* ⭐ BIGGER "Loading..." TEXT */
+    .loader-text {
+      margin-top: 22px;
+      font-size: 24px;
+      /* was 18px */
+      font-weight: 700;
+      color: #A31D1D;
+      animation: pulse 1.3s infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
-    </style>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+    }
+
+    @keyframes heartbeat {
+      0% {
+        transform: scale(1);
+      }
+
+      25% {
+        transform: scale(1.12);
+      }
+
+      50% {
+        transform: scale(1);
+      }
+
+      75% {
+        transform: scale(1.12);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+
+      100% {
+        opacity: 1;
+      }
+    }
+  </style>
+
+
+  <!-- React root -->
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

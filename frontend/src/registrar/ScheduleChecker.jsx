@@ -801,7 +801,7 @@ const ScheduleChecker = () => {
 
   // Put this at the very bottom before the return 
   if (loading || hasAccess === null) {
-    return <LoadingOverlay open={loading} message="Check Access" />;
+   return <LoadingOverlay open={loading} message="Loading..." />;
   }
 
   if (!hasAccess) {
@@ -866,9 +866,6 @@ const ScheduleChecker = () => {
       <Box sx={{ display: "flex", gap: "1rem" }}>
         <Box>
           <Box sx={{ display: "flex", gap: "1rem", marginTop: "1.3rem" }}>
-            <Button className="hover:bg-[#000000] text-white px-6 py-2 rounded">
-              Print Room Schedule
-            </Button>
             <Button
               className="hover:bg-[#000000] text-white px-6 py-2 rounded"
               onClick={() => {

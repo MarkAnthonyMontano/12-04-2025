@@ -17,7 +17,7 @@ import {
   Visibility,
   VisibilityOff
 } from "@mui/icons-material";
-import ReCAPTCHA from "react-google-recaptcha";
+// import ReCAPTCHA from "react-google-recaptcha";
 import { SettingsContext } from "../App"; // ✅ Access settings from context
 import API_BASE_URL from "../apiConfig";
 const Register = () => {
@@ -39,7 +39,7 @@ const Register = () => {
     }
   }, [settings]);
 
-  const [capVal, setCapVal] = useState(null);
+  // const [capVal, setCapVal] = useState(null);
   const [usersData, setUserData] = useState({
     email: '',
     password: '',
@@ -69,6 +69,17 @@ const Register = () => {
 
   const handleRegister = async () => {
     if (isSubmitting) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(usersData.email)) {
+      setSnack({
+        open: true,
+        message: "Please enter a valid email address!",
+        severity: "error",
+      });
+      return;
+    }
 
 
     // ✅ Password match check
@@ -113,14 +124,10 @@ const Register = () => {
 
   };
 
-  useEffect(() => {
-    if (showOtpModal && otpInputRef.current) {
-      otpInputRef.current.focus(); // Automatically focuses input
-    }
-  }, [showOtpModal]);
+
 
   const startResendTimer = () => {
-    setResendTimer(120);
+    setResendTimer(60);
     const interval = setInterval(() => {
       setResendTimer((prev) => {
         if (prev <= 1) {
@@ -182,7 +189,7 @@ const Register = () => {
       setShowOtpModal(false);
 
       // Delay navigation so user can read snackbar
-      setTimeout(() => navigate("/login_applicant"), 1500);
+      setTimeout(() => navigate("/login_applicant"), 3000);
 
     } catch (err) {
       setSnack({
@@ -378,20 +385,20 @@ const Register = () => {
 
 
               {/* CAPTCHA */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+              {/* <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
                 <ReCAPTCHA
                   sitekey="6Lfem44rAAAAAEeAexdQxvN0Lpm1V4KPu1bBxaGy"
                   onChange={(val) => setCapVal(val)}
                 />
-              </Box>
+              </Box> */}
 
               {/* Register Button — disabled until CAPTCHA is solved */}
               <div
-                onClick={!isSubmitting && capVal ? handleRegister : null}
+                onClick={!isSubmitting ? handleRegister : null}
                 style={{
-                  pointerEvents: !isSubmitting && capVal ? "auto" : "none",
-                  opacity: !isSubmitting && capVal ? 1 : 0.5,
-                  cursor: !isSubmitting && capVal ? "pointer" : "not-allowed",
+                  pointerEvents: !isSubmitting ? "auto" : "none",
+                  opacity: !isSubmitting ? 1 : 0.5,
+                  cursor: !isSubmitting ? "pointer" : "not-allowed",
                   marginTop: "20px",
                   backgroundColor: mainButtonColor,
                   height: "50px",
@@ -407,7 +414,6 @@ const Register = () => {
               >
                 {isSubmitting ? "Registering..." : "Register"}
               </div>
-
 
 
               <div className="LinkContainer RegistrationLink" style={{ margin: '0.1rem 0rem' }}>
@@ -448,14 +454,13 @@ const Register = () => {
                 position: "absolute",
                 top: "8px",
                 right: "8px",
-                backgroundColor: mainButtonColor,
+                backgroundColor: "#6D2323",
                 color: "white",
                 border: "none",
                 borderRadius: "50%",
                 width: "32px",
                 height: "32px",
                 cursor: "pointer",
-                border: "2px solid black"
               }}
             >
               ✕
@@ -468,13 +473,14 @@ const Register = () => {
               </small>
             </h2>
 
+
             <TextField
               fullWidth
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               placeholder="Enter OTP"
               inputRef={otpInputRef}
-              onKeyDown={handleKeyDownOtp} // Submit on Enter
+              onKeyDown={handleKeyDownOtp}
               inputProps={{
                 maxLength: 6,
                 style: { textAlign: "center", fontSize: "18px" },
@@ -515,7 +521,6 @@ const Register = () => {
             </button>
           </Box>
         </Modal>
-
 
 
         {/* Snackbar Notification */}

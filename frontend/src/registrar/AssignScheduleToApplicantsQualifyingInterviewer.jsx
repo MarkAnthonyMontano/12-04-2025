@@ -640,7 +640,8 @@ const AssignScheduleToApplicantsInterviewer = () => {
 
         // 👉 Use first applicant for email preview
         const first = assignedApplicants[0];
-        const fullName = `${first.last_name}, ${first.first_name} ${first.middle_name || ""}`.trim();
+
+        const fullName = `${first.last_name || ""}, ${first.first_name || ""} ${first.middle_name || ""}`.trim();
 
         const sched = schedules.find(s => s.schedule_id === selectedSchedule);
         if (!sched) {
@@ -962,7 +963,7 @@ const AssignScheduleToApplicantsInterviewer = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-        return <LoadingOverlay open={loading} message="Check Access" />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {

@@ -301,7 +301,7 @@ const RegisterRegistrar = () => {
 
             if (editData) {
                 // EDIT registrar
-                await axios.post(`${API_BASE_URL}/update_registrar/${editData.id}`, fd, {
+                await axios.put(`${API_BASE_URL}/update_registrar/${editData.id}`, fd, {
                     headers: { "Content-Type": "multipart/form-data" },
                 });
 
@@ -406,7 +406,7 @@ const RegisterRegistrar = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-        return <LoadingOverlay open={loading} message="Check Access" />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {

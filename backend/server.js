@@ -6993,13 +6993,15 @@ io.on("connection", (socket) => {
   an.applicant_number,
   p.person_id,
   p.first_name,
+  p.middle_name,
   p.last_name,
   p.emailAddress
 FROM interview_applicants ia
 JOIN interview_exam_schedule s ON ia.schedule_id = s.schedule_id
 JOIN applicant_numbering_table an ON ia.applicant_id = an.applicant_number
 JOIN person_table p ON an.person_id = p.person_id
-WHERE ia.schedule_id = ? AND an.applicant_number IN (?)`,
+WHERE ia.schedule_id = ? 
+AND an.applicant_number IN (?)`,
         [schedule_id, applicant_numbers]
       );
 
@@ -7054,8 +7056,10 @@ WHERE ia.schedule_id = ? AND an.applicant_number IN (?)`,
         });
 
         const personalizedMsg = message
-          .replace("{first_name}", row.first_name)
-          .replace("{last_name}", row.last_name)
+          .replace("{first_name}", row.first_name || "")
+          .replace("{middle_name}", row.middle_name || "")
+          .replace("{last_name}", row.last_name || "")
+
           .replace("{applicant_number}", row.applicant_number)
           .replace("{day}", row.day_description)
           .replace("{room}", row.room_description)
@@ -10880,7 +10884,7 @@ app.get('/enrolled_student_list/:userID/:selectedCourse/:department_section_id/:
         INNER JOIN dprtmnt_table AS dt ON dct.dprtmnt_id = dt.dprtmnt_id
       WHERE pt.person_id = ? AND es.course_id = ? AND es.department_section_id = ? AND es.active_school_year_id = ?
     `;
-    
+
 
     const [result] = await db3.query(sql, [userID, selectedCourse, department_section_id, activeSchoolYear]);
     res.json(result);
@@ -12967,141 +12971,141 @@ app.get("/api/section_assigned_to/:userID/:selectedSchoolYear/:selectedSchoolSem
 
 
 app.post("/api/grades/import", upload.single("file"), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: "No file uploaded" });
-        }
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
 
-        const { course_id, active_school_year_id, department_section_id } = req.body;
+    const { course_id, active_school_year_id, department_section_id } = req.body;
 
-        if (!course_id || !active_school_year_id || !department_section_id) {
-            return res.status(400).json({ error: "Please Select a class to upload the file on" });
-        }
+    if (!course_id || !active_school_year_id || !department_section_id) {
+      return res.status(400).json({ error: "Please Select a class to upload the file on" });
+    }
 
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        
-        // Start parsing headers from Row 3 (index 2)
-        const rows = XLSX.utils.sheet_to_json(sheet, { range: 2 }); 
-        
-        const studentNumbers = rows
-          .map(r => String(r["Student Number"]))
-          .filter(n => n && n !== 'undefined');
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
 
-        if (studentNumbers.length === 0) {
-            return res.status(400).json({ error: "No valid student numbers" });
-        }
+    // Start parsing headers from Row 3 (index 2)
+    const rows = XLSX.utils.sheet_to_json(sheet, { range: 2 });
 
-        // 1. Database Validation (existing code is fine)
-        const [existingStudents] = await db3.query(
-            `SELECT student_number
+    const studentNumbers = rows
+      .map(r => String(r["Student Number"]))
+      .filter(n => n && n !== 'undefined');
+
+    if (studentNumbers.length === 0) {
+      return res.status(400).json({ error: "No valid student numbers" });
+    }
+
+    // 1. Database Validation (existing code is fine)
+    const [existingStudents] = await db3.query(
+      `SELECT student_number
             FROM enrolled_subject
             WHERE student_number IN (?) 
               AND course_id = ? 
               AND active_school_year_id = ? 
               AND department_section_id = ?`,
-            [studentNumbers, course_id, active_school_year_id, department_section_id]
-        );
+      [studentNumbers, course_id, active_school_year_id, department_section_id]
+    );
 
-        if (existingStudents.length === 0) {
-            return res.status(400).json({ error: "No matching students found in database" });
+    if (existingStudents.length === 0) {
+      return res.status(400).json({ error: "No matching students found in database" });
+    }
+
+    const existingStudentNumbers = existingStudents.map(s => s.student_number);
+    let skippedCount = 0;
+
+    // 2. Processing and Updating Grades
+    for (const row of rows) {
+      const studentNumber = String(row["Student Number"]);
+
+      if (!existingStudentNumbers.includes(studentNumber)) {
+        skippedCount++;
+        continue;
+      }
+
+      let midterm = row["Midterm"];
+      let finals = row["Finals"];
+      let en_remarks = 0;
+      let finalGradeValue; // Will hold the numeric Finals score
+      let gradesStatus = null;
+
+      const rawMidtermStr = String(midterm || "").trim().toUpperCase();
+      const rawFinalsStr = String(finals || "").trim().toUpperCase();
+
+      // --- Special Case 1: INC ---
+      if (rawMidtermStr === "INC" || rawFinalsStr === "INC") {
+        en_remarks = 3; // New rule: INC = 3
+        finalGradeValue = "0.00";
+        gradesStatus = "INC";
+      }
+      // --- Special Case 2: DROP/DRP ---
+      else if (rawMidtermStr === "DRP" || rawMidtermStr === "DROP" || rawFinalsStr === "DRP" || rawFinalsStr === "DROP") {
+        const dropValue = "DRP";
+        en_remarks = 4; // New rule: DROP = 4
+        midterm = dropValue;
+        finals = dropValue;
+        finalGradeValue = dropValue;
+        gradesStatus = "DRP";
+      }
+      // --- Normal Numeric Processing (Whole Number Scale 0-100) ---
+      else {
+        // Convert raw input to whole numbers (0-100 score)
+        let numericMidterm = parseInt(rawMidtermStr, 10);
+        let numericFinals = parseInt(rawFinalsStr, 10);
+
+        // Handle NaN/Invalid numeric inputs
+        if (isNaN(numericMidterm)) numericMidterm = 0;
+        if (isNaN(numericFinals)) numericFinals = 0;
+
+        // Rule: Final Grade = Finals Grade (using the raw score)
+        finalGradeValue = numericFinals;
+
+        // --- EN_REMARKS Logic (Whole Number Comparison) ---
+        if (finalGradeValue < 75 || numericMidterm < 75) {
+          en_remarks = 2; // Failing (if Finals < 75 OR Midterm < 75)
+        } else if (finalGradeValue >= 75) {
+          en_remarks = 1; // Passing (if Finals >= 75 AND Midterm >= 75)
+        } else {
+          en_remarks = 0; // Default/Error
         }
 
-        const existingStudentNumbers = existingStudents.map(s => s.student_number);
-        let skippedCount = 0;
-        
-        // 2. Processing and Updating Grades
-        for (const row of rows) {
-            const studentNumber = String(row["Student Number"]);
+        // Prepare values for database insertion (formatted as string)
+        midterm = String(numericMidterm);
+        finals = String(numericFinals);
+        finalGradeValue = String(finalGradeValue);
+      }
 
-            if (!existingStudentNumbers.includes(studentNumber)) {
-                skippedCount++;
-                continue;
-            }
-
-            let midterm = row["Midterm"];
-            let finals = row["Finals"];
-            let en_remarks = 0;
-            let finalGradeValue; // Will hold the numeric Finals score
-            let gradesStatus = null; 
-
-            const rawMidtermStr = String(midterm || "").trim().toUpperCase();
-            const rawFinalsStr = String(finals || "").trim().toUpperCase();
-            
-            // --- Special Case 1: INC ---
-            if (rawMidtermStr === "INC" || rawFinalsStr === "INC") {
-                en_remarks = 3; // New rule: INC = 3
-                finalGradeValue = "0.00"; 
-                gradesStatus = "INC";
-            } 
-            // --- Special Case 2: DROP/DRP ---
-            else if (rawMidtermStr === "DRP" || rawMidtermStr === "DROP" || rawFinalsStr === "DRP" || rawFinalsStr === "DROP") {
-                const dropValue = "DRP";
-                en_remarks = 4; // New rule: DROP = 4
-                midterm = dropValue;
-                finals = dropValue;
-                finalGradeValue = dropValue;
-                gradesStatus = "DRP";
-            } 
-            // --- Normal Numeric Processing (Whole Number Scale 0-100) ---
-            else {
-                // Convert raw input to whole numbers (0-100 score)
-                let numericMidterm = parseInt(rawMidtermStr, 10);
-                let numericFinals = parseInt(rawFinalsStr, 10);
-
-                // Handle NaN/Invalid numeric inputs
-                if (isNaN(numericMidterm)) numericMidterm = 0;
-                if (isNaN(numericFinals)) numericFinals = 0;
-                
-                // Rule: Final Grade = Finals Grade (using the raw score)
-                finalGradeValue = numericFinals;
-
-                // --- EN_REMARKS Logic (Whole Number Comparison) ---
-                if (finalGradeValue < 75 || numericMidterm < 75) {
-                    en_remarks = 2; // Failing (if Finals < 75 OR Midterm < 75)
-                } else if (finalGradeValue >= 75) {
-                    en_remarks = 1; // Passing (if Finals >= 75 AND Midterm >= 75)
-                } else {
-                    en_remarks = 0; // Default/Error
-                }
-
-                // Prepare values for database insertion (formatted as string)
-                midterm = String(numericMidterm);
-                finals = String(numericFinals);
-                finalGradeValue = String(finalGradeValue);
-            }
-            
-            // 3. Database Update (existing code is fine)
-            await db3.query(
-                `UPDATE enrolled_subject
+      // 3. Database Update (existing code is fine)
+      await db3.query(
+        `UPDATE enrolled_subject
                 SET midterm = ?, finals = ?, final_grade = ?, en_remarks = ?, grades_status = ?
                 WHERE student_number = ? 
                   AND course_id = ? 
                   AND active_school_year_id = ? 
                   AND department_section_id = ?`,
-                [
-                    midterm,
-                    finals,
-                    finalGradeValue,
-                    en_remarks,
-                    gradesStatus,
-                    studentNumber,
-                    course_id,
-                    active_school_year_id,
-                    department_section_id
-                ]
-            );
-        }
-
-        res.json({
-            success: true,
-            message: `Grades updated successfully! Skipped: ${skippedCount} students.`
-        });
-    } catch (err) {
-        console.error("❌ Excel import error:", err);
-        res.status(500).json({ error: "Failed to import Excel" });
+        [
+          midterm,
+          finals,
+          finalGradeValue,
+          en_remarks,
+          gradesStatus,
+          studentNumber,
+          course_id,
+          active_school_year_id,
+          department_section_id
+        ]
+      );
     }
+
+    res.json({
+      success: true,
+      message: `Grades updated successfully! Skipped: ${skippedCount} students.`
+    });
+  } catch (err) {
+    console.error("❌ Excel import error:", err);
+    res.status(500).json({ error: "Failed to import Excel" });
+  }
 });
 
 
@@ -15270,8 +15274,10 @@ app.get("/api/announcements/faculty", async (req, res) => {
   }
 });
 
+// UPDATED
 app.get("/api/faculty_evaluation", async (req, res) => {
   const { prof_id, year_id, semester_id } = req.query;
+
   try {
     const [rows] = await db3.query(
       `
@@ -15279,34 +15285,41 @@ app.get("/api/faculty_evaluation", async (req, res) => {
         pt.prof_id,
         st.course_id,
         ct.course_code,
+        st.question_id,
+        qt.question_description,
         sy.year_id, 
         sy.semester_id,
+
         SUM(CASE WHEN st.question_answer = 1 THEN 1 ELSE 0 END) AS answered_one_count,
         SUM(CASE WHEN st.question_answer = 2 THEN 1 ELSE 0 END) AS answered_two_count,
         SUM(CASE WHEN st.question_answer = 3 THEN 1 ELSE 0 END) AS answered_three_count,
         SUM(CASE WHEN st.question_answer = 4 THEN 1 ELSE 0 END) AS answered_four_count,
         SUM(CASE WHEN st.question_answer = 5 THEN 1 ELSE 0 END) AS answered_five_count
+
       FROM student_evaluation_table AS st
       INNER JOIN prof_table AS pt ON st.prof_id = pt.prof_id
       INNER JOIN active_school_year_table AS sy ON st.school_year_id = sy.id
       INNER JOIN question_table AS qt ON st.question_id = qt.id
       INNER JOIN course_table AS ct ON st.course_id = ct.course_id
-      WHERE pt.prof_id = ? AND sy.year_id = ? AND sy.semester_id = ?
-      GROUP BY st.course_id, pt.prof_id;
-      `, [prof_id, year_id, semester_id]
-    );
 
-    if (rows.length === 0) {
-      return res.json([]);
-    }
+      WHERE pt.prof_id = ? AND sy.year_id = ? AND sy.semester_id = ?
+
+      GROUP BY st.course_id, st.question_id, pt.prof_id
+      ORDER BY st.course_id, st.question_id;
+      `,
+      [prof_id, year_id, semester_id]
+    );
+    console.log(rows)
 
     res.json(rows);
-    console.log(rows);
+
   } catch (err) {
-    console.error("❌ Error fetching person_status:", err);
+    console.error("❌ Error fetching evaluation:", err);
     res.status(500).json({ message: "Database error" });
   }
 });
+
+
 
 app.post("/insert-logs/faculty/:prof_id", async (req, res) => {
   const { prof_id } = req.params;
@@ -16895,7 +16908,7 @@ app.post("/insert-logs/:userID", async (req, res) => {
       res.status(400).send({ message: "No Data found" })
     }
 
-    const user= userData[0];
+    const user = userData[0];
     const UserID = user.employee_id
     const fullName = `${user.last_name}, ${prof.first_name} ${prof.middle_name}`;
     const email = user.email
@@ -16916,7 +16929,9 @@ app.post("/insert-logs/:userID", async (req, res) => {
 
 app.get("/get_enrollment_statistic", async (req, res) => {
   try {
-    const [rows] = await db3.execute(`
+    const { year } = req.query; // Get year from query string
+
+    let query = `
       SELECT
         SUM(CASE WHEN academicProgram = 'Techvoc' THEN 1 ELSE 0 END) AS Techvoc,
         SUM(CASE WHEN academicProgram = 'Graduate' THEN 1 ELSE 0 END) AS Graduate,
@@ -16925,7 +16940,16 @@ app.get("/get_enrollment_statistic", async (req, res) => {
         SUM(CASE WHEN classifiedAs = 'Foreign Student' THEN 1 ELSE 0 END) AS ForeignStudent,
         SUM(CASE WHEN classifiedAs = 'Transferee' THEN 1 ELSE 0 END) AS Transferee
       FROM person_table
-    `);
+    `;
+
+    const params = [];
+
+    if (year) {
+      query += " WHERE YEAR(created_at) = ?";
+      params.push(year);
+    }
+
+    const [rows] = await db3.execute(query, params);
 
     res.json(rows[0]);
   } catch (err) {
@@ -16933,6 +16957,7 @@ app.get("/get_enrollment_statistic", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 //----------------------------prereq end
 
 const PORT = process.env.WEB_PORT || 5000;

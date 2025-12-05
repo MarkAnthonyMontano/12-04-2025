@@ -34,11 +34,11 @@ import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import PeopleIcon from '@mui/icons-material/People';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
+import SearchIcon from '@mui/icons-material/Search';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
-import SearchIcon from "@mui/icons-material/Search";
 import API_BASE_URL from "../apiConfig";
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ScoreIcon from '@mui/icons-material/Score';
@@ -93,14 +93,14 @@ const StudentNumbering = () => {
     }, []);
 
     const tabs = [
-       { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
-    { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
-    { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-    { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
-    { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
-    { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
-    { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <MenuBookIcon fontSize="large" /> },
-
+      { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
+      { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
+      { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
+      { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
+      { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
+      { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
+      { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <SearchIcon fontSize="large" /> },
+  
 
 
     ];
@@ -538,7 +538,7 @@ const StudentNumbering = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-        return <LoadingOverlay open={loading} message="Check Access" />;
+       return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {

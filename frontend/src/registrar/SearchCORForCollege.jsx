@@ -18,7 +18,6 @@ import ScoreIcon from '@mui/icons-material/Score';
 import SchoolIcon from "@mui/icons-material/School";
 import { useNavigate } from "react-router-dom";
 import API_BASE_URL from "../apiConfig";
-
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
@@ -130,15 +129,14 @@ const SearchCertificateOfRegistration = () => {
   const [clickedSteps, setClickedSteps] = useState([]);
 
   const tabs1 = [
-    { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
-    { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
-    { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-    { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
-    { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
-    { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
-    { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <MenuBookIcon fontSize="large" /> },
-
-
+      { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
+      { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
+      { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
+      { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
+      { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
+      { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
+      { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <SearchIcon fontSize="large" /> },
+  
   ];
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -307,7 +305,7 @@ const SearchCertificateOfRegistration = () => {
 
   // Put this at the very bottom before the return 
   if (loading || hasAccess === null) {
-    return <LoadingOverlay open={loading} message="Check Access" />;
+   return <LoadingOverlay open={loading} message="Loading..." />;
   }
 
   if (!hasAccess) {

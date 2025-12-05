@@ -490,7 +490,7 @@ const TOR = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-        return <LoadingOverlay open={loading} message="Check Access" />;
+       return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {

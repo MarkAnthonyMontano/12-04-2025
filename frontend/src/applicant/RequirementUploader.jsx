@@ -111,7 +111,8 @@ const RequirementUploader = () => {
       if (!allRequirementsCompleted && allRequiredUploaded) {
         setSnack({
           open: true,
-          message: `🎉 Congratulations! You have successfully submitted your Application at ${companyName}.`,
+          message: `🎉 Congratulations! You have successfully submitted your application to ${companyName}. Please check your Gmail account or your Applicant Dashboard regularly to stay updated on your current step, as indicated in the stepper below.`,
+
           severity: "success",
         });
       }
@@ -196,7 +197,7 @@ const RequirementUploader = () => {
 
     );
 
- 
+
 
 
     return (
@@ -491,12 +492,12 @@ const RequirementUploader = () => {
               sx={{ width: "95%", mt: 2, border: `2px solid ${borderColor}` }}
             >
               <Table>
-                <TableHead sx={{  backgroundColor: settings?.header_color || "#1976d2", border: `2px solid ${borderColor}` }}>
+                <TableHead sx={{ backgroundColor: settings?.header_color || "#1976d2", border: `2px solid ${borderColor}` }}>
                   <TableRow>
                     <TableCell sx={{ color: "white", border: `2px solid ${borderColor}` }}>Document</TableCell>
                     <TableCell sx={{ color: "white", border: `2px solid ${borderColor}` }}>Upload</TableCell>
-                    <TableCell sx={{ color: "white", border: `2px solid ${borderColor}`  }}>Remarks</TableCell>
-                    <TableCell sx={{ color: "white", border: `2px solid ${borderColor}`  }}>Preview</TableCell>
+                    <TableCell sx={{ color: "white", border: `2px solid ${borderColor}` }}>Remarks</TableCell>
+                    <TableCell sx={{ color: "white", border: `2px solid ${borderColor}` }}>Preview</TableCell>
                     <TableCell sx={{ color: "white", border: `2px solid ${borderColor}` }}>Delete</TableCell>
                   </TableRow>
                 </TableHead>

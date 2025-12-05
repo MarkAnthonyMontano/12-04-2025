@@ -38,7 +38,6 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ScoreIcon from '@mui/icons-material/Score';
 
 
-
 const RegistrarDashboard1 = () => {
 
     const settings = useContext(SettingsContext);
@@ -81,15 +80,14 @@ const RegistrarDashboard1 = () => {
     }, [settings]);
 
     const stepsData = [
-
-    { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
-    { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
-    { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
-    { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
-    { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
-    { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
-    { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <MenuBookIcon fontSize="large" /> },
-
+      { label: "Admission Process For College", to: "/applicant_list", icon: <SchoolIcon fontSize="large" /> },
+      { label: "Applicant Form", to: "/registrar_dashboard1", icon: <AssignmentIcon fontSize="large" /> },
+      { label: "Student Requirements", to: "/registrar_requirements", icon: <AssignmentTurnedInIcon fontSize="large" /> },
+      { label: "Qualifying / Interview Exam Score", to: "/qualifying_interview_exam_scores", icon: <ScoreIcon fontSize="large" /> },
+      { label: "Student Numbering", to: "/student_numbering_per_college", icon: <DashboardIcon fontSize="large" /> },
+      { label: "Course Tagging", to: "/course_tagging", icon: <MenuBookIcon fontSize="large" /> },
+      { label: "Certificate of Registration", to: "/search_cor_for_college", icon: <SearchIcon fontSize="large" /> },
+  
 
 
     ];
@@ -1097,7 +1095,7 @@ const RegistrarDashboard1 = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-        return <LoadingOverlay open={loading} message="Check Access" />;
+       return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {

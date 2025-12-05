@@ -1,10 +1,20 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+// main.jsx
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App.jsx";
 
-createRoot(document.getElementById('root')).render(
+// ⭐ Render React (ONLY ONCE)
+createRoot(document.getElementById("root")).render(
   <StrictMode>
     <App />
-  </StrictMode>,
-)
+  </StrictMode>
+);
+
+// ⭐ Hide startup loader immediately after React loads
+const loader = document.getElementById("startup-loader");
+if (loader) {
+  loader.style.opacity = "0";
+  loader.style.transition = "opacity 0.5s ease";
+  setTimeout(() => loader.remove(), 500);
+}

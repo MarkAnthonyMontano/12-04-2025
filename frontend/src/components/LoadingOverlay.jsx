@@ -1,29 +1,24 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { SettingsContext } from "../App";
 import DefaultLogo from "../assets/EaristLogo.png";
 import API_BASE_URL from "../apiConfig";
+
 const LoadingOverlay = ({ open, message }) => {
   const settings = useContext(SettingsContext);
+
   const [fetchedLogo, setFetchedLogo] = useState(DefaultLogo);
   const [companyName, setCompanyName] = useState("Loading...");
+  const [bgImage, setBgImage] = useState(null);
 
   useEffect(() => {
-    if (settings) {
-      // ✅ Load dynamic logo from settings context
-      if (settings.logo_url) {
-        setFetchedLogo(`${API_BASE_URL}${settings.logo_url}`);
-      } else {
-        setFetchedLogo(DefaultLogo);
-      }
+    if (!settings) return;
 
-      // ✅ Load company name
-      if (settings.company_name) {
-        setCompanyName(settings.company_name);
-      } else {
-        setCompanyName("Your Institution");
-      }
-    }
+    setFetchedLogo(
+      settings.logo_url ? `${API_BASE_URL}${settings.logo_url}` : DefaultLogo
+    );
+    setBgImage(settings.bg_image ? `${API_BASE_URL}${settings.bg_image}` : null);
+    setCompanyName(settings.company_name || "Your Institution");
   }, [settings]);
 
   if (!open) return null;
@@ -32,80 +27,94 @@ const LoadingOverlay = ({ open, message }) => {
     <Box
       sx={{
         position: "fixed",
-        top: 0,
-        left: 0,
+        inset: 0,
         width: "100vw",
         height: "100vh",
-        bgcolor: "transparent",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 2000,
-        flexDirection: "column",
+        zIndex: 3000,
+        fontFamily: "Poppins, sans-serif",
+
+        backgroundImage: bgImage ? `url(${bgImage})` : "none",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+
+        "::before": {
+          content: '""',
+          position: "absolute",
+          inset: 0,
+          backdropFilter: "blur(6px)",
+          backgroundColor: "#fff9eccc", // match index.html overlay tint
+          zIndex: -1,
+        },
       }}
     >
-      {/* Circular border animation */}
-      <Box sx={{ position: "relative", display: "inline-flex" }}>
-        <CircularProgress
-          size={120}
-          thickness={3}
+
+      {/* WRAPPER for circle + logo (same as index.html) */}
+      <Box sx={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+
+        {/* CUSTOM Circle Loader (HTML version, not MUI circular progress) */}
+        <Box
           sx={{
-            color: "#A31D1D",
-            animationDuration: "800ms",
+            width: "160px",
+            height: "160px",
+            border: "8px solid rgba(163, 29, 29, 0.3)",
+            borderTopColor: "#A31D1D",
+            borderRadius: "50%",
+            animation: "spin 0.9s linear infinite",
           }}
         />
 
-        {/* Dynamic Logo */}
+        {/* Inner Logo exactly like index.html */}
         <Box
           component="img"
           src={fetchedLogo}
           alt={`${companyName} Logo`}
           sx={{
             position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 90,
-            height: 90,
+            width: "120px",
+            height: "120px",
             borderRadius: "50%",
-            bgcolor: "transparent",
-            p: 1,
-            boxShadow: "0 0 15px rgba(163, 29, 29, 0.5)",
+            boxShadow: "0 0 20px rgba(163, 29, 29, 0.6)",
             animation: "heartbeat 1.5s ease-in-out infinite",
           }}
         />
+
       </Box>
 
-      {/* Message */}
+      {/* Text */}
       <Typography
-        variant="h6"
         sx={{
           mt: 3,
+          fontSize: "24px",
+          fontWeight: "700",
           color: "#A31D1D",
-          fontWeight: "bold",
-          animation: "pulse 1.5s infinite",
+          animation: "pulse 1.3s infinite",
         }}
       >
         {message || `${companyName} is loading...`}
       </Typography>
 
-      {/* Keyframes */}
       <style>
         {`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
           @keyframes heartbeat {
-            0% { transform: translate(-50%, -50%) scale(1); }
-            25% { transform: translate(-50%, -50%) scale(1.1); }
-            50% { transform: translate(-50%, -50%) scale(1); }
-            75% { transform: translate(-50%, -50%) scale(1.1); }
-            100% { transform: translate(-50%, -50%) scale(1); }
+            0%, 100% { transform: scale(1); }
+            25%, 75% { transform: scale(1.12); }
+            50% { transform: scale(1); }
           }
           @keyframes pulse {
             0% { opacity: 1; }
-            50% { opacity: 0.6; }
+            50% { opacity: 0.5; }
             100% { opacity: 1; }
           }
         `}
       </style>
+
     </Box>
   );
 };

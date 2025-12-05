@@ -980,7 +980,7 @@ const AdminApplicantList = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-        return <LoadingOverlay open={loading} message="Check Access" />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {
@@ -1633,11 +1633,29 @@ const AdminApplicantList = () => {
                             <TableRow
                                 key={person.person_id}
                                 sx={{
-                                    backgroundColor: isDuplicateApplicant(person) ? "#FFA50080" : "transparent",
-                                    color: isDuplicateApplicant(person) ? "black" : "inherit",
-                                    fontWeight: isDuplicateApplicant(person) ? "bold" : "normal",
+                                    backgroundColor:
+                                        Number(person.submitted_documents) === 1
+                                            ? "#C8E6C9" // 🌿 light green when submitted
+                                            : isDuplicateApplicant(person)
+                                                ? "#FFA50080" // orange for duplicates
+                                                : "transparent",
+
+                                    color:
+                                        Number(person.submitted_documents) === 1
+                                            ? "black"
+                                            : isDuplicateApplicant(person)
+                                                ? "black"
+                                                : "inherit",
+
+                                    fontWeight:
+                                        Number(person.submitted_documents) === 1
+                                            ? "bold"
+                                            : isDuplicateApplicant(person)
+                                                ? "bold"
+                                                : "normal",
                                 }}
                             >
+
                                 {/* # */}
                                 <TableCell sx={{ textAlign: "center", border: `2px solid ${borderColor}` }}>
                                     {index + 1}
@@ -1684,7 +1702,7 @@ const AdminApplicantList = () => {
                                         textAlign: "center",
                                         border: `2px solid ${borderColor}`,
                                         cursor: "pointer",
-                                         color: "blue"
+                                        color: "blue"
                                     }}
                                     onClick={() => handleRowClick(person.person_id)}
                                 >
@@ -1697,7 +1715,7 @@ const AdminApplicantList = () => {
                                         textAlign: "left",
                                         border: `2px solid ${borderColor}`,
                                         cursor: "pointer",
-                                         color: "blue"
+                                        color: "blue"
                                     }}
                                     onClick={() => handleRowClick(person.person_id)}
                                 >
@@ -1749,7 +1767,7 @@ const AdminApplicantList = () => {
                                         border: `2px solid ${borderColor}`,
                                         textAlign: "center",
                                         verticalAlign: "middle",
-                                           backgroundColor: "white",
+                                        backgroundColor: "white",
                                         p: 0,
                                     }}
                                 >

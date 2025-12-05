@@ -363,7 +363,11 @@ const GradingSheet = () => {
 
   const exportToExcel = () => {
     if (!students || students.length === 0) {
-      alert("No students found to export.");
+      setSnack({
+        open: true,
+        message: "No Students .",
+        severity: "error",
+      });
       return;
     }
 

@@ -183,34 +183,69 @@ const FacultyEvaluation = () => {
     const fetchFacultyData = async () => {
         try {
             const res = await axios.get(`${API_BASE_URL}/api/faculty_evaluation`, {
-                params: {
-                    prof_id: profData.prof_id,
-                    year_id: selectedSchoolYear,
-                    semester_id: selectedSchoolSemester,
-                },
+            params: {
+                prof_id: profData.prof_id,
+                year_id: selectedSchoolYear,
+                semester_id: selectedSchoolSemester,
+            },
             });
-            const data = res.data;
 
-            const formatted = data.map(course => ({
-                courseID: course.course_id,
-                course_code: course.course_code,
-                chartData: [
-                    { name: "Rating 1", total: course.answered_one_count },
-                    { name: "Rating 2", total: course.answered_two_count },
-                    { name: "Rating 3", total: course.answered_three_count },
-                    { name: "Rating 4", total: course.answered_four_count },
-                    { name: "Rating 5", total: course.answered_five_count },
-                ]
-            }));
+            const rows = res.data;
 
-            setChartData(formatted);
-        } catch (err) {
+            if (!rows.length) {
             setChartData([]);
+            return;
+            }
 
-        } finally {
-            setLoading(false);
+            // Group by course -> question
+            const grouped = {};
+
+            rows.forEach((r) => {
+            if (!grouped[r.course_id]) {
+                grouped[r.course_id] = {
+                course_id: r.course_id,
+                course_code: r.course_code,
+                questions: [],
+                };
+            }
+
+            grouped[r.course_id].questions.push({
+                question_id: r.question_id,
+                question_description: r.question_description,
+                counts: {
+                1: r.answered_one_count,
+                2: r.answered_two_count,
+                3: r.answered_three_count,
+                4: r.answered_four_count,
+                5: r.answered_five_count,
+                },
+                ratings: {
+                1: (r.answered_one_count / 75) * 100,
+                2: (r.answered_two_count / 75) * 100,
+                3: (r.answered_three_count / 75) * 100,
+                4: (r.answered_four_count / 75) * 100,
+                5: (r.answered_five_count / 75) * 100,
+                }
+            });
+
+            // ✅ Create chartData for Recharts / print
+            grouped[r.course_id].chartData = [
+                { name: "Rating 1", total: r.answered_one_count },
+                { name: "Rating 2", total: r.answered_two_count },
+                { name: "Rating 3", total: r.answered_three_count },
+                { name: "Rating 4", total: r.answered_four_count },
+                { name: "Rating 5", total: r.answered_five_count },
+            ];
+            });
+
+            setChartData(Object.values(grouped));
+
+        } catch (err) {
+            console.error(err);
+            setChartData([]);
         }
     };
+
 
     const handleSchoolYearChange = (event) => {
         setSelectedSchoolYear(event.target.value);
@@ -657,43 +692,20 @@ const FacultyEvaluation = () => {
                                             EVALUATION FOR COURSE {entry.course_code}
                                         </Typography>
                                         {/* Chart takes the rest of card height */}
-                                        <Box sx={{ height: "calc(100% - 40px)", px: 2, pb: 2 }}>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart
-                                                    data={entry.chartData}
-                                                    margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
-                                                >
+                                        <Box sx={{ height: 400, mb: 4 }}>
+                                            <ResponsiveContainer width="100%" height={300}>
+                                                <BarChart data={entry.chartData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
                                                     <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis
-                                                        dataKey="name"
-                                                        interval={0}
-                                                    />
-                                                    <YAxis
-                                                        allowDecimals={false}
-                                                        ticks={[0, 10, 20, 30, 40, 50, 60]}
-                                                        domain={[0, 60]}
-                                                        label={{
-                                                            value: 'Number of Responses',
-                                                            angle: -90,
-                                                            position: 'insideLeft',
-                                                            dy: 90,
-                                                            dx: 10
-                                                        }}
-                                                    />
+                                                    <XAxis dataKey="name" />
+                                                    <YAxis allowDecimals={false} domain={[0, 75]} /> {/* 75 = max responses */}
                                                     <Tooltip />
                                                     <Bar dataKey="total">
-                                                        {entry.chartData.map((_, i) => (
-                                                            <Cell
-                                                                key={`cell-${i}`}
-                                                                fill={[
-                                                                    "#FF0000",
-                                                                    "#00C853",
-                                                                    "#2196F3",
-                                                                    "#FFD600",
-                                                                    "#FF6D00",
-                                                                ][i % 5]}
-                                                            />
-                                                        ))}
+                                                    {entry.chartData.map((item, idx) => (
+                                                        <Cell
+                                                        key={idx}
+                                                        fill={["#FF0000", "#00C853", "#2196F3", "#FFD600", "#FF6D00"][idx]}
+                                                        />
+                                                    ))}
                                                     </Bar>
                                                 </BarChart>
                                             </ResponsiveContainer>

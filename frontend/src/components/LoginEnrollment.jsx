@@ -51,6 +51,17 @@ function getUserDashboard(role, accessList = []) {
 const LoginEnrollment = ({ setIsAuthenticated }) => {
   const settings = useContext(SettingsContext);
 
+  // REMOVE startup loader when LoginEnrollment mounts
+  useEffect(() => {
+    const loader = document.getElementById("startup-loader");
+    if (loader) {
+      loader.style.opacity = "0";
+      loader.style.transition = "opacity 0.4s ease";
+      setTimeout(() => loader.remove(), 400);
+    }
+  }, []);
+
+
   const [titleColor, setTitleColor] = useState("#000000");
   const [subtitleColor, setSubtitleColor] = useState("#555555");
   const [borderColor, setBorderColor] = useState("#000000");
@@ -77,6 +88,8 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
   const [resendTimer, setResendTimer] = useState(60);
   const [lockout, setLockout] = useState(false);
   const [lockoutTimer, setLockoutTimer] = useState(0);
+
+
   const [loading, setLoading] = useState(false);
   const [loading2, setLoading2] = useState(false);
   const [loading3, setLoading3] = useState(false);
@@ -301,6 +314,7 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          position: "relative"  // <-- important
         }}
       >
         <Container
@@ -514,7 +528,6 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
           </div>
         </Container>
 
-        {/* Snackbar */}
         <Snackbar
           open={snack.open}
           autoHideDuration={4000}
@@ -527,23 +540,22 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
         </Snackbar>
 
         {/* OTP Modal */}
+
         <Modal open={showOtpModal} onClose={() => setShowOtpModal(false)}>
-          <Box
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              bgcolor: "#fff",
-              border: "3px solid black",
-              p: 4,
-              borderRadius: "12px",
-              width: 350,
-              boxShadow: 24,
-              textAlign: "center",
-              position: "relative",
-            }}
-          >
+          <Box sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            bgcolor: "#fff",
+            border: "3px solid black",
+            p: 4,
+            borderRadius: "12px",
+            width: 350,
+            boxShadow: 24,
+            textAlign: "center",
+            position: "relative",
+          }}>
             <button
               onClick={() => setShowOtpModal(false)}
               style={{
@@ -624,8 +636,9 @@ const LoginEnrollment = ({ setIsAuthenticated }) => {
             </Button>
           </Box>
         </Modal>
-        <LoadingOverlay open={loading3} message={"Verifying OTP"} />
-        <LoadingOverlay open={loading2} message={"Resending OTP"} />
+        <LoadingOverlay open={loading} />
+        <LoadingOverlay open={loading2} />
+        <LoadingOverlay open={loading3} />
 
       </Box>
     </>
